@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        /* ── DESIGN TOKENS ── */
+        :root {
+            --white:        #ffffff;
+            --bg:           #f5f5f5;
+            --surface:      #ffffff;
+            --border:       #e4e4e4;
+            --border-dark:  #cccccc;
+            --text:         #111111;
+            --text-2:       #555555;
+            --text-3:       #999999;
+            --accent:       #1a56db;
+            --accent-light: #eff3ff;
+            --danger:       #c92a2a;
+            --danger-light: #fff5f5;
+            --danger-border:#ffc9c9;
+            --success:      #2f9e44;
+            --r-s: 5px;
+            --r:   8px;
+            --r-l: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            width: 340px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-logo {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .brand-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .brand-version {
+            font-size: 10.5px;
+            color: var(--text-3);
+            font-weight: 500;
+        }
+
+        /* ── BODY ── */
+        .body {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-l);
+            overflow: hidden;
+        }
+
+        /* ── TOGGLES ── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 13px;
+        }
+
+        .toggle-row + .toggle-row {
+            border-top: 1px solid var(--border);
+        }
+
+        .toggle-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .toggle-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .toggle-desc {
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        .switch {
+            position: relative;
+            width: 38px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .switch input { display: none; }
+
+        .slider {
+            position: absolute;
+            inset: 0;
+            background: #d9d9d9;
+            border-radius: 22px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            top: 3px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        input:checked + .slider { background: var(--accent); }
+        input:checked + .slider::before { transform: translateX(16px); }
+
+        /* ── STATUS CARD (aman / tidak ada result) ── */
+        .status-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-l);
+            padding: 12px 13px;
+            display: none;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .status-safe-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--success);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-safe-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .status-safe-text {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .status-safe-sub {
+            font-size: 11px;
+            color: var(--text-3);
+            padding-left: 14px;
+        }
+
+        /* ── DETECTION PANEL (warning + scores + actions, satu kesatuan) ── */
+        .detection-panel {
+            background: var(--surface);
+            border: 1px solid var(--danger-border);
+            border-radius: var(--r-l);
+            overflow: hidden;
+            display: none;
+        }
+
+        /* bagian atas: status deteksi */
+        .det-top {
+            background: var(--danger-light);
+            padding: 11px 13px 10px;
+            border-bottom: 1px solid var(--danger-border);
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+        }
+
+        .det-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--danger);
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 4px;
+            animation: blink 1.6s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.2; }
+        }
+
+        .det-top-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .det-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--danger);
+            line-height: 1;
+        }
+
+        .det-conf {
+            font-size: 11px;
+            color: #aa2222;
+        }
+
+        /* bagian tengah: skor analisis */
+        .det-scores {
+            padding: 10px 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .det-scores-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-3);
+            margin-bottom: 1px;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar-label {
+            font-size: 11px;
+            color: var(--text-2);
+            width: 96px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 4px;
+            background: #ebebeb;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            width: 0;
+            transition: width 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .bar-fill.red { background: var(--danger); }
+
+        .bar-val {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-2);
+            width: 30px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .bar-val.red { color: var(--danger); }
+
+        /* baris final: sedikit lebih menonjol */
+        .bar-row.final {
+            padding-top: 6px;
+            border-top: 1px solid var(--border);
+            margin-top: 1px;
+        }
+
+        .bar-row.final .bar-label {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 11.5px;
+        }
+
+        .bar-row.final .bar-track { height: 5px; }
+        .bar-row.final .bar-val   { font-size: 12px; }
+
+        /* bagian bawah: tombol aksi */
+        .det-actions {
+            padding: 10px 13px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 9px 14px;
+            border: none;
+            border-radius: var(--r);
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            line-height: 1;
+        }
+
+        .action-btn:hover  { opacity: 0.86; transform: translateY(-1px); }
+        .action-btn:active { transform: translateY(0); opacity: 1; }
+
+        .btn-block  { background: var(--danger); color: white; }
+        .btn-report { background: white; color: var(--text-2); border: 1px solid var(--border-dark); }
+
+        /* ── WARNING STANDALONE (kalau tidak ada result) ── */
+        .warning {
+            background: var(--danger-light);
+            border: 1px solid var(--danger-border);
+            border-radius: var(--r-l);
+            padding: 12px 13px;
+            display: none;
+        }
+
+        .warning-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 3px;
+        }
+
+        .warning-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--danger);
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: blink 1.6s ease-in-out infinite;
+        }
+
+        .warning-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .warning-sub {
+            font-size: 11px;
+            color: #aa2222;
+            padding-left: 15px;
+            line-height: 1.5;
+        }
+
+        /* ── RESULTS (standalone, hidden — digantikan detection panel) ── */
+        .result-header {
+            padding: 9px 13px 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-3);
+        }
+
+        .result-rows {
+            padding: 10px 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .result-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 2px 0;
+        }
+
+        /* ── ACTIONS STANDALONE (hidden — ada di dalam detection panel) ── */
+        .actions {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 9px 14px 11px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-link {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--text-2);
+            text-decoration: none;
+            padding: 4px 7px;
+            border-radius: var(--r-s);
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .footer-link:hover {
+            background: #f0f0f0;
+            color: var(--text);
+        }
+
+        .footer-link svg { width: 12px; height: 12px; }
+
+        .footer-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #cccccc;
+        }
+
+        .status-dot.on { background: var(--success); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="brand">
+        <img src="../icons/icon_JD.png" class="brand-logo" alt="Logo">
+        <span class="brand-name">Judol Detector</span>
+    </div>
+    <span class="brand-version">v1.0.0</span>
+</div>
+
+<div class="body">
+
+    <!-- Toggle controls -->
+    <div class="card">
+        <div class="toggle-row">
+            <div class="toggle-info">
+                <span class="toggle-label">Aktifkan Ekstensi</span>
+                <span class="toggle-desc">Deteksi otomatis saat browsing</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="toggleExtension">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="toggle-row">
+            <div class="toggle-info">
+                <span class="toggle-label">Mode Sensor</span>
+                <span class="toggle-desc">Blur konten yang terdeteksi</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="toggleSensor">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Status aman (tampil saat scan selesai dan tidak terdeteksi judol) -->
+    <div class="status-card" id="statusSafeCard">
+        <div class="status-safe-title">
+            <div class="status-safe-dot"></div>
+            <span class="status-safe-text">Halaman ini aman</span>
+        </div>
+        <span class="status-safe-sub">Tidak ada konten promosi judi online</span>
+    </div>
+
+    <!-- Detection panel: muncul saat judol terdeteksi, berisi warning + skor + aksi -->
+    <div class="detection-panel" id="detectionPanel">
+
+        <!-- Status banner -->
+        <div class="det-top">
+            <div class="det-dot"></div>
+            <div class="det-top-text">
+                <span class="det-title">Terdeteksi Promosi Judol</span>
+                <span class="det-conf" id="confidenceText">Tingkat keyakinan: —</span>
+            </div>
+        </div>
+
+        <!-- Skor analisis -->
+        <div class="det-scores" id="resultCard">
+            <div class="det-scores-label">Hasil Deteksi Halaman</div>
+            <div class="bar-row">
+                <span class="bar-label">Analisis Gambar</span>
+                <div class="bar-track"><div class="bar-fill" id="barImage"></div></div>
+                <span class="bar-val" id="confImage">—</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Analisis Teks</span>
+                <div class="bar-track"><div class="bar-fill" id="barText"></div></div>
+                <span class="bar-val" id="confText">—</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Analisis Fusion</span>
+                <div class="bar-track"><div class="bar-fill" id="barFusion"></div></div>
+                <span class="bar-val" id="confFusion">—</span>
+            </div>
+            <div class="bar-row final">
+                <span class="bar-label">Skor Akhir</span>
+                <div class="bar-track"><div class="bar-fill red" id="barFinal"></div></div>
+                <span class="bar-val red" id="confFinal">—</span>
+            </div>
+        </div>
+
+        <!-- Tombol aksi -->
+        <div class="det-actions" id="actionButtons">
+            <button class="action-btn btn-block"    id="btnBlock">Blokir Situs Ini</button>
+            <button class="action-btn btn-report"   id="btnReport">Laporkan ke Komdigi</button>
+        </div>
+
+    </div>
+
+    <!-- Warning sederhana: muncul saat judol terdeteksi tapi belum ada skor (fallback) -->
+    <div class="warning" id="warningBanner" style="display:none"></div>
+
+</div>
+
+<div class="footer">
+    <a href="#" class="footer-link" id="linkBlocklist">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        Daftar Blokir
+    </a>
+    <div class="footer-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Nonaktif</span>
+    </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

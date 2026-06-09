@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Blokir — Judol Detector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:           #f5f5f5;
+            --surface:      #ffffff;
+            --border:       #e4e4e4;
+            --border-dark:  #cccccc;
+            --text:         #111111;
+            --text-2:       #555555;
+            --text-3:       #999999;
+            --accent:       #1a56db;
+            --accent-light: #eff3ff;
+            --accent-mid:   #c7d7fd;
+            --danger:       #c92a2a;
+            --danger-light: #fff5f5;
+            --danger-border:#ffc9c9;
+            --success:      #2f9e44;
+            --r-s: 5px;
+            --r:   8px;
+            --r-l: 12px;
+            --r-xl: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 32px 20px 48px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* ── HEADER ── */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 7px;
+            object-fit: contain;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 4px 12px;
+            font-size: 12px;
+            color: var(--text-2);
+        }
+
+        .pill strong { color: var(--text); font-weight: 700; }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #f0faf2;
+            border: 1px solid #b5dfbc;
+            border-radius: 100px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .status-pulse {
+            width: 5px;
+            height: 5px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 1.5s ease infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.35; }
+        }
+
+        /* ── CONTROL BOX ── */
+        .control-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-3);
+        }
+
+        .add-row {
+            display: flex;
+            gap: 7px;
+        }
+
+        .input-field {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-ico {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-3);
+            display: flex;
+            pointer-events: none;
+        }
+
+        .input-ico svg { width: 13px; height: 13px; }
+
+        input[type="text"] {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 9px 11px 9px 30px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12.5px;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        input[type="text"]::placeholder { color: var(--text-3); }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(26,86,219,0.12);
+            background: white;
+        }
+
+        input[type="text"].invalid {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 2px rgba(201,42,42,0.1);
+        }
+
+        .btn-add {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--r);
+            padding: 9px 14px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.15s;
+        }
+
+        .btn-add:hover { opacity: 0.85; }
+        .btn-add svg   { width: 12px; height: 12px; }
+
+        .validation-msg {
+            font-size: 11px;
+            color: var(--danger);
+            display: none;
+        }
+
+        .btn-clear-all {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-3);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: var(--r-s);
+            transition: color 0.15s, background 0.15s;
+            display: none;
+        }
+
+        .btn-clear-all:hover {
+            color: var(--danger);
+            background: var(--danger-light);
+        }
+
+        /* ── LIST HEADER ── */
+        .list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .list-head-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-3);
+        }
+
+        /* ── LIST ── */
+        .list {
+            list-style: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            overflow: hidden;
+            max-height: 440px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #e0e0e0 transparent;
+        }
+
+        .list::-webkit-scrollbar       { width: 4px; }
+        .list::-webkit-scrollbar-track { background: transparent; }
+        .list::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+
+        /* ── LIST ITEM ── */
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--border);
+            gap: 10px;
+            animation: fadeIn 0.18s ease;
+            transition: background 0.12s;
+        }
+
+        .list-item:last-child { border-bottom: none; }
+        .list-item:hover      { background: #fafafa; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .item-left {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            overflow: hidden;
+        }
+
+        .favicon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .favicon img { width: 100%; height: 100%; object-fit: cover; }
+
+        .favicon-letter {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-3);
+            text-transform: uppercase;
+        }
+
+        .item-domain {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn-del {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-3);
+            padding: 4px;
+            border-radius: var(--r-s);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            transition: color 0.15s, background 0.15s;
+        }
+
+        .btn-del svg  { width: 14px; height: 14px; }
+        .btn-del:hover {
+            color: var(--danger);
+            background: var(--danger-light);
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty {
+            text-align: center;
+            padding: 44px 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            background: white;
+            display: none;
+        }
+
+        .empty-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+        .empty-desc  { font-size: 12px; color: var(--text-3); line-height: 1.6; max-width: 280px; margin: 0 auto; }
+
+        /* ── FADE OUT ANIMATION ── */
+        .item-out {
+            animation: itemOut 0.18s ease forwards !important;
+        }
+
+        @keyframes itemOut {
+            to {
+                opacity: 0;
+                max-height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                border-bottom-width: 0;
+                overflow: hidden;
+            }
+        }
+
+        /* ── MODAL ── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(3px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s;
+        }
+
+        .overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-xl);
+            padding: 24px;
+            max-width: 340px;
+            width: 90%;
+            transform: scale(0.95);
+            transition: transform 0.18s;
+        }
+
+        .overlay.open .modal { transform: scale(1); }
+
+        .modal h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .modal p {
+            font-size: 12.5px;
+            color: var(--text-2);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .modal-btns { display: flex; gap: 8px; }
+
+        .modal-btn {
+            flex: 1;
+            padding: 9px 12px;
+            border: none;
+            border-radius: var(--r);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .modal-btn:hover  { opacity: 0.85; }
+        .modal-btn-cancel { background: var(--bg); color: var(--text-2); border: 1px solid var(--border-dark); }
+        .modal-btn-danger { background: var(--danger); color: white; }
+
+        /* ── TOAST ── */
+        .toasts {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--text);
+            color: white;
+            padding: 10px 16px;
+            border-radius: var(--r);
+            font-size: 12.5px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(8px) scale(0.97);
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: auto;
+            max-width: 280px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .toast.ok  { background: #1a1a1a; }
+        .toast.err { background: var(--danger); }
+        .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+
+        @media (max-width: 480px) {
+            body { padding: 20px 14px 36px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header class="page-header">
+        <div class="header-left">
+            <img src="../icons/icon_JD.png" class="header-logo" alt="Logo" onerror="this.style.display='none'">
+            <h1 class="header-title">Daftar Blokir</h1>
+        </div>
+        <div class="header-right">
+            <div class="status-pill">
+                <span class="status-pulse"></span>
+                Aktif
+            </div>
+            <div class="pill"><strong id="blockedCount">0</strong>&nbsp;situs</div>
+        </div>
+    </header>
+
+    <div class="control-box">
+        <div class="control-label">Tambah manual</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="add-row">
+                <div class="input-field">
+                    <div class="input-ico">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                    </div>
+                    <input type="text" id="inputDomain" placeholder="contoh: slotgacor.net atau https://slotgacor.net" autocomplete="off">
+                </div>
+                <button id="btnAdd" class="btn-add">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Tambah
+                </button>
+            </div>
+            <span id="validationMessage" class="validation-msg">Format domain tidak valid. Masukkan tanpa http:// atau https://</span>
+        </div>
+        <div class="input-field">
+            <div class="input-ico">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            <input type="text" id="searchBar" placeholder="Cari domain atau URL..." autocomplete="off">
+        </div>
+    </div>
+
+    <div class="list-head">
+        <span class="list-head-label">Situs Diblokir</span>
+        <button id="btnClearAll" class="btn-clear-all">Hapus semua</button>
+    </div>
+
+    <ul id="list" class="list"></ul>
+
+    <div id="emptyState" class="empty">
+        <div class="empty-title" id="emptyTitle">Belum ada situs yang diblokir</div>
+        <p class="empty-desc" id="emptyDesc">Tambahkan domain secara manual di atas, atau biarkan ekstensi mendeteksi dan memblokir otomatis.</p>
+    </div>
+
+</div>
+
+<!-- Modal konfirmasi hapus semua -->
+<div id="confirmModal" class="overlay">
+    <div class="modal">
+        <h3>Hapus semua blokir?</h3>
+        <p>Semua domain di daftar ini akan dihapus. Situs-situs tersebut bisa diakses kembali. Tindakan ini tidak bisa dibatalkan.</p>
+        <div class="modal-btns">
+            <button id="btnModalCancel" class="modal-btn modal-btn-cancel">Batal</button>
+            <button id="btnModalConfirm" class="modal-btn modal-btn-danger">Ya, hapus semua</button>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" class="toasts"></div>
+
+<script src="blocklist.js"></script>
+</body>
+</html>
