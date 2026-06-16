@@ -16,3 +16,7 @@ app.include_router(predict.router)
 @app.get("/")
 def root():
     return {"status": "Judol Detector API running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

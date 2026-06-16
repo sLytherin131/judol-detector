@@ -8,3 +8,5 @@ numpy
 python-multipart
 python-dotenv
 pydantic
+openvino
+optimum[openvino]

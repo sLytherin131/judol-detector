@@ -18,6 +18,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (result) showResult(result);
     });
 
+    // Cek apakah hasil untuk tab ini dari cache
+    const hostname = (() => { try { return new URL(tab.url).hostname } catch { return '' } })();
+    if (hostname) {
+        chrome.runtime.sendMessage({ type: 'GET_CACHE', hostname }, cached => {
+            if (chrome.runtime.lastError) return;
+            if (cached) {
+                document.getElementById('cacheInfo').style.display = 'block';
+            }
+        });
+    }
+
     // Toggle ekstensi
     document.getElementById('toggleExtension').addEventListener('change', e => {
         const next = e.target.checked;
@@ -49,6 +60,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('linkBlocklist').addEventListener('click', e => {
         e.preventDefault();
         chrome.tabs.create({ url: chrome.runtime.getURL('blocklist/blocklist.html') });
+    });
+
+    // Hapus cache deteksi
+    document.getElementById('linkClearCache').addEventListener('click', e => {
+        e.preventDefault();
+        chrome.runtime.sendMessage({ type: 'CLEAR_ALL_CACHE' }, response => {
+            if (chrome.runtime.lastError) return;
+            const link = document.getElementById('linkClearCache');
+            link.textContent = 'Cache dihapus';
+            link.style.color = 'var(--success)';
+            document.getElementById('cacheInfo').style.display = 'none';
+            setTimeout(() => {
+                link.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Hapus Cache
+                `;
+                link.style.color = '';
+            }, 2000);
+        });
     });
 });
 

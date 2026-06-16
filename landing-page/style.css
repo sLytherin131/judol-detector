@@ -3,6 +3,15 @@
    Design: Clean light, minimal, no AI-slop decorations
    ───────────────────────────────────────────────────────────── */
 
+/* Nohemi Font */
+@font-face {
+    font-family: 'Nohemi';
+    src: url('fonts/Nohemi/Nohemi/Variable-TT/Nohemi-VF.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -18,15 +27,15 @@
     --text:         #111111;
     --text-2:       #444444;
     --text-3:       #888888;
-    --accent:       #1a56db;
-    --accent-light: #eff3ff;
-    --accent-mid:   #c7d7fd;
+    --accent:       #070707;
+    --accent-light: #f0f0f0;
+    --accent-mid:   #cccccc;
     --danger:       #c92a2a;
     --danger-light: #fff5f5;
     --danger-mid:   #ffc9c9;
     --success:      #2f9e44;
     --mono:         'SF Mono', 'Fira Code', 'Consolas', monospace;
-    --font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font:         'Nohemi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --r-s:          6px;
     --r:            10px;
     --r-l:          16px;
@@ -63,13 +72,38 @@ body {
 }
 
 .nav-inner {
-    max-width: 1080px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     padding: 0 24px;
     height: 60px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+}
+
+.logo-img-nav {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.install-card-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: white;
+    padding: 4px;
+    border: 1px solid var(--border);
+}
+
+.install-card-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .logo {
@@ -78,6 +112,12 @@ body {
     gap: 8px;
     text-decoration: none;
     color: var(--text);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+    opacity: 0.7;
 }
 
 .logo-icon {
@@ -95,12 +135,12 @@ body {
 .logo-icon svg { width: 15px; height: 15px; }
 
 .logo span {
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
 }
 
-.logo strong { font-weight: 700; }
+.logo strong { font-weight: 900; }
 
 nav {
     display: flex;
@@ -131,7 +171,7 @@ nav a:hover {
 }
 
 .nav-cta:hover {
-    background: #1648c7 !important;
+    background: #333333 !important;
     color: white !important;
 }
 
@@ -155,7 +195,7 @@ nav a:hover {
 }
 
 .btn-primary:hover {
-    background: #1648c7;
+    background: #333333;
     transform: translateY(-1px);
 }
 
@@ -197,10 +237,10 @@ nav a:hover {
 }
 
 .hero-inner {
-    max-width: 1080px;
+    max-width: 1280px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1.4fr;
     gap: 60px;
     align-items: center;
     width: 100%;
@@ -260,6 +300,24 @@ nav a:hover {
         0 1px 2px rgba(0,0,0,0.04),
         0 8px 24px rgba(0,0,0,0.08),
         0 24px 48px rgba(0,0,0,0.06);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.mockup:hover {
+    transform: scale(1.03);
+    box-shadow:
+        0 2px 4px rgba(0,0,0,0.06),
+        0 12px 32px rgba(0,0,0,0.12),
+        0 32px 64px rgba(0,0,0,0.1);
+}
+
+.mockup-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--r-l);
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .mockup-chrome {
@@ -519,7 +577,7 @@ nav a:hover {
 /* ─── FITUR ──────────────────────────────────────────────── */
 .features {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);

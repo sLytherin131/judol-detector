@@ -5,20 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Judol Detector — Ekstensi Chrome Anti Judi Online</title>
     <meta name="description" content="Ekstensi Chrome yang mendeteksi dan memblokir konten promosi judi online secara otomatis menggunakan AI.">
+<meta name="application-name" content="Judol Detector">
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="images/favicon.png">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
 <header class="site-nav" id="siteNav">
     <div class="nav-inner">
-        <div class="logo">
-            <div class="logo-icon"><i data-lucide="shield-check"></i></div>
-            <span>Judol<strong>Detector</strong></span>
-        </div>
+        <a href="#" class="logo">
+            <img src="images/Icon_JD.png" class="logo-img-nav" alt="Judol Detector">
+            <span><strong>Judol Detector</strong></span>
+        </a>
         <nav>
             <a href="#cara-kerja">Cara Kerja</a>
             <a href="#fitur">Fitur</a>
@@ -34,15 +33,13 @@
         <div class="hero-inner">
             <div class="hero-text">
                 <div class="hero-eyebrow">
-                    <span class="eyebrow-dot"></span>
-                    Ekstensi Chrome · Gratis · Open Source
                 </div>
-                <h1>Browsing tanpa<br>jebakan judi online.</h1>
-                <p>Judol Detector memindai setiap halaman yang Anda buka dan memberi peringatan saat menemukan promosi judi online — teks maupun gambar.</p>
+                <h1>Browsing <u>tanpa</u><br>jebakan <u>judi online</u>.</h1>
+                <p>Judol Detector memindai setiap halaman yang Anda buka dan memberi peringatan saat menemukan promosi judi online berupa teks maupun gambar.</p>
                 <div class="hero-cta">
                     <a href="#install" class="btn-primary">
-                        <i data-lucide="download"></i>
                         Download Ekstensi
+                        <i data-lucide="download"></i>
                     </a>
                     <a href="#cara-kerja" class="btn-outline">
                         Cara kerja
@@ -52,57 +49,7 @@
             </div>
 
             <div class="mockup">
-                <div class="mockup-chrome">
-                    <div class="chrome-dots">
-                        <span></span><span></span><span></span>
-                    </div>
-                    <div class="chrome-bar">
-                        <i data-lucide="lock" class="chrome-lock"></i>
-                        portal-berita.co.id/nasional/ekonomi-2026
-                    </div>
-                </div>
-                <div class="mockup-content">
-                    <div class="fake-heading"></div>
-                    <div class="fake-para">
-                        <div class="fake-line w-full"></div>
-                        <div class="fake-line w-90"></div>
-                        <div class="fake-line w-80"></div>
-                    </div>
-                    <div class="mock-alert">
-                        <div class="mock-alert-head">
-                            <div class="mock-alert-badge">JUDOL</div>
-                            <div class="mock-alert-text">
-                                <div class="mock-alert-title">Konten judi online terdeteksi</div>
-                                <div class="mock-alert-sub">Judol Detector menemukan iklan judi di halaman ini</div>
-                            </div>
-                        </div>
-                        <div class="mock-scores">
-                            <div class="mock-score-row">
-                                <span>Analisis Teks</span>
-                                <div class="mock-bar-track"><div class="mock-bar-fill" style="width:89%"></div></div>
-                                <span class="mock-score-val">89%</span>
-                            </div>
-                            <div class="mock-score-row">
-                                <span>Analisis Gambar</span>
-                                <div class="mock-bar-track"><div class="mock-bar-fill" style="width:74%"></div></div>
-                                <span class="mock-score-val">74%</span>
-                            </div>
-                            <div class="mock-score-row">
-                                <span>Skor Akhir</span>
-                                <div class="mock-bar-track"><div class="mock-bar-fill red" style="width:93%"></div></div>
-                                <span class="mock-score-val red">93%</span>
-                            </div>
-                        </div>
-                        <div class="mock-alert-btns">
-                            <button class="mock-btn mock-btn-red">Blokir Situs</button>
-                            <button class="mock-btn mock-btn-ghost">Laporkan</button>
-                        </div>
-                    </div>
-                    <div class="fake-para">
-                        <div class="fake-line w-65"></div>
-                        <div class="fake-line w-55"></div>
-                    </div>
-                </div>
+                <img src="images/web1.png" alt="Judol Detector Detection Result" class="mockup-img">
             </div>
         </div>
     </section>
@@ -116,18 +63,18 @@
             <div class="steps">
                 <div class="step">
                     <div class="step-num">01</div>
-                    <h3>Pemindaian pasif</h3>
+                    <h3>Pemindaian otomatis</h3>
                     <p>Setiap halaman yang Anda buka dipindai secara otomatis. Teks dan gambar dianalisis di background tanpa memperlambat browser.</p>
                 </div>
                 <div class="step">
                     <div class="step-num">02</div>
                     <h3>Deteksi berbasis AI</h3>
-                    <p>Model IndoBERT menganalisis teks dan ResNet34 menganalisis gambar. Hasilnya digabung (fusion) untuk skor kepercayaan yang lebih akurat.</p>
+                    <p>Menggunakan tiga model gabungan yang sudah dilatih untuk memperoleh hasil deteksi yang lebih akurat.</p>
                 </div>
                 <div class="step">
                     <div class="step-num">03</div>
                     <h3>Peringatan & tindakan</h3>
-                    <p>Jika terdeteksi, muncul notifikasi di popup. Anda bisa blokir situs, aktifkan sensor konten, atau lapor ke Komdigi — satu klik.</p>
+                    <p>Jika terdeteksi, muncul notifikasi di popup. Anda bisa blokir situs, aktifkan sensor konten, atau lapor ke Komdigi dengan satu klik.</p>
                 </div>
             </div>
         </div>
@@ -138,13 +85,13 @@
         <div class="section-inner">
             <div class="section-tag">Fitur</div>
             <h2>Apa yang bisa dilakukan.</h2>
-            <p class="section-sub">Semua fitur dirancang untuk efisiensi — tidak ada yang sekadar pajangan.</p>
+            <p class="section-sub"></p>
             <div class="features">
                 <div class="feature">
                     <div class="feature-icon"><i data-lucide="scan-text"></i></div>
                     <div>
                         <h3>Deteksi teks & gambar</h3>
-                        <p>IndoBERT untuk teks, ResNet34 untuk gambar. Keduanya jalan bersamaan dan hasilnya digabung untuk akurasi lebih tinggi.</p>
+                        <p>Menggunakan model teks dan gambar yang jalan bersamaan dan hasilnya digabung untuk akurasi lebih tinggi.</p>
                     </div>
                 </div>
                 <div class="feature">
@@ -168,20 +115,6 @@
                         <p>Satu klik buka platform aduan resmi Kementerian Komunikasi dan Digital untuk melaporkan situs yang terdeteksi.</p>
                     </div>
                 </div>
-                <div class="feature">
-                    <div class="feature-icon"><i data-lucide="hard-drive"></i></div>
-                    <div>
-                        <h3>Analisis lokal</h3>
-                        <p>Semua permintaan analisis dikirim ke backend lokal Anda sendiri. Tidak ada data browsing yang keluar ke server pihak ketiga.</p>
-                    </div>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon"><i data-lucide="sliders-horizontal"></i></div>
-                    <div>
-                        <h3>Kontrol dari popup</h3>
-                        <p>Aktifkan atau matikan ekstensi dan mode sensor langsung dari popup. Tidak perlu buka halaman pengaturan terpisah.</p>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
@@ -190,7 +123,7 @@
     <section id="install" class="section section-white">
         <div class="section-inner">
             <div class="section-tag">Instalasi</div>
-            <h2>Cara pasang di Chrome.</h2>
+            <h2>Cara pasang di browser.</h2>
             <p class="section-sub">Ekstensi ini belum ada di Chrome Web Store, jadi instalasinya manual. Butuh sekitar 2 menit.</p>
             <div class="install-grid">
                 <ol class="install-list">
@@ -204,7 +137,7 @@
                     <li class="install-item">
                         <div class="install-num">2</div>
                         <div class="install-body">
-                            <strong>Buka halaman ekstensi Chrome</strong>
+                            <strong>Buka halaman ekstensi browser</strong>
                             <span>Ketik <code>chrome://extensions</code> di address bar, lalu tekan Enter.</span>
                         </div>
                     </li>
@@ -212,7 +145,7 @@
                         <div class="install-num">3</div>
                         <div class="install-body">
                             <strong>Aktifkan Developer Mode</strong>
-                            <span>Toggle di pojok kanan atas halaman ekstensi — harus aktif sebelum lanjut.</span>
+                            <span>Toggle di pojok kanan atas halaman ekstensi harus aktif sebelum lanjut.</span>
                         </div>
                     </li>
                     <li class="install-item">
@@ -225,18 +158,19 @@
                 </ol>
 
                 <div class="install-card">
-                    <div class="install-card-icon"><i data-lucide="package"></i></div>
-                    <div class="install-card-meta">
-                        <strong>Judol Detector v1.0.0</strong>
-                        <span>Ekstensi Chrome · ~2 MB</span>
+                    <div class="install-card-brand">
+                        <div class="install-card-icon">
+                            <img src="images/Icon_JD.png" class="install-card-logo" alt="Judol Detector">
+                        </div>
+                        <div class="install-card-meta">
+                            <strong>Judol Detector v1.0.0</strong>
+                            <span>Ukuran · 365 KB</span>
+                        </div>
                     </div>
                     <a href="judol-detector-ext.zip" download class="btn-primary">
                         <i data-lucide="download"></i>
                         Download ZIP
                     </a>
-                    <p class="install-note">
-                        Membutuhkan backend lokal yang berjalan di <code>localhost:8000</code>. Lihat <code>README.md</code> untuk panduan setup server.
-                    </p>
                 </div>
             </div>
         </div>
@@ -248,15 +182,13 @@
     <div class="footer-inner">
         <div class="footer-brand">
             <div class="logo">
-                <div class="logo-icon"><i data-lucide="shield-check"></i></div>
-                <span>Judol<strong>Detector</strong></span>
+                <img src="images/Icon_JD.png" class="logo-img-nav" alt="Judol Detector">
+                <span><strong>Judol Detector</strong></span>
             </div>
-            <p>Alat bantu deteksi konten promosi judi online untuk pengguna internet Indonesia.</p>
+            <p>Ekstensi deteksi konten promosi judi online untuk pengguna internet Indonesia.</p>
         </div>
         <div class="footer-meta">
             <span>© 2026 Judol Detector</span>
-            <span>·</span>
-            <span>Dibuat untuk kepentingan publik</span>
         </div>
     </div>
 </footer>

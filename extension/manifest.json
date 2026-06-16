@@ -22,7 +22,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/*", "blocked.html"],
+      "resources": ["icons/*", "fonts/*", "blocked.html"],
       "matches": ["<all_urls>"]
     }
   ],

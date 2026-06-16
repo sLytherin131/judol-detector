@@ -1,0 +1,30 @@
+name: Keep HF Space Alive
+
+on:
+  schedule:
+    # Ping setiap 10 menit untuk mencegah HF Spaces idle sleep (~48 menit timeout)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Bisa di-trigger manual juga
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping HF Space root endpoint
+        run: |
+          echo "Pinging HF Space at $(date -u)"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://ricky131-judol-detector-backend.hf.space/)
+          echo "HTTP Status: $HTTP_CODE"
+
+          # Jika dapat 502/503 (cold start), retry sekali setelah 30 detik
+          if [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ] || [ "$HTTP_CODE" = "000" ]; then
+            echo "Server sedang cold start, retry setelah 30 detik..."
+            sleep 30
+            HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://ricky131-judol-detector-backend.hf.space/)
+            echo "Retry HTTP Status: $HTTP_CODE2"
+          fi
+
+      - name: Ping HF Space health endpoint
+        run: |
+          echo "Pinging /health at $(date -u)"
+          curl -s --max-time 60 https://ricky131-judol-detector-backend.hf.space/health || echo "Health check completed (may be cold starting)"
