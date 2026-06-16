@@ -2,8 +2,9 @@ name: Keep HF Space Alive
 
 on:
   schedule:
-    # Ping setiap 10 menit untuk mencegah HF Spaces idle sleep (~48 menit timeout)
-    - cron: '*/10 * * * *'
+    # Ping setiap 15 menit untuk mencegah HF Spaces idle sleep (~48 menit timeout)
+    # ~96 runs/day × ~1 min = ~2,880 min/month (within free tier 2,000 min + UptimeRobot covers the rest)
+    - cron: '*/15 * * * *'
   workflow_dispatch: # Bisa di-trigger manual juga
 
 jobs:
