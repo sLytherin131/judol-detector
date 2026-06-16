@@ -4,3 +4,14 @@ venv/
 env/
 .env
 weights/
+
+# Landing page
+*.zip
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

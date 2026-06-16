@@ -101,8 +101,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // Jika API gagal (null), jangan simpan cache & jangan label apapun
                 if (!result) {
                     console.warn('[background] API tidak merespons, deteksi dilewati untuk halaman ini.')
-                    // Sembunyikan loading indicator di content script
-                    chrome.tabs.sendMessage(tabId, { type: 'HIDE_LOADING' }).catch(() => {})
+                    // Tampilkan notifikasi server down di content script
+                    chrome.tabs.sendMessage(tabId, { type: 'API_DOWN' }).catch(() => {})
                     return
                 }
 

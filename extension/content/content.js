@@ -86,6 +86,99 @@ function hideLoadingIndicator() {
     }, 300)
 }
 
+// ── SERVER DOWN INDICATOR ──
+// Ditampilkan ketika API gagal setelah semua retry (server sedang cold start / down)
+let _serverDownIndicator = null
+
+function showServerDownIndicator() {
+    // Sembunyikan loading indicator dulu
+    hideLoadingIndicator()
+
+    // Jangan tampilkan jika sudah ada
+    if (_serverDownIndicator) return
+
+    _serverDownIndicator = document.createElement('div')
+    _serverDownIndicator.id = 'judol-server-down'
+    _serverDownIndicator.innerHTML = `
+        <style>
+            #judol-server-down {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: #ffffff;
+                padding: 10px 12px 10px 16px;
+                border-radius: 8px;
+                font-family: 'Nohemi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.12);
+                z-index: 2147483647;
+                animation: judol-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                border: 1px solid #ffc9c9;
+            }
+            #judol-server-down .sd-icon {
+                font-size: 14px;
+                line-height: 1;
+            }
+            #judol-server-down .sd-text {
+                font-weight: 600;
+                font-size: 12px;
+                color: #c92a2a;
+                white-space: nowrap;
+            }
+            #judol-server-down .sd-close {
+                width: 20px;
+                height: 20px;
+                border: none;
+                background: transparent;
+                color: #999;
+                font-size: 14px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                padding: 0;
+                line-height: 1;
+                transition: background 0.15s, color 0.15s;
+            }
+            #judol-server-down .sd-close:hover {
+                background: #f0f0f0;
+                color: #333;
+            }
+            @keyframes judol-slide-in {
+                from { opacity: 0; transform: translateY(16px) scale(0.96); }
+                to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes judol-slide-out {
+                from { opacity: 1; transform: translateY(0) scale(1); }
+                to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+            }
+        </style>
+        <span class="sd-icon">⚠️</span>
+        <span class="sd-text">Server sedang tidak tersedia</span>
+        <button class="sd-close" title="Tutup">✕</button>
+    `
+    document.body.appendChild(_serverDownIndicator)
+
+    // Event listener tombol close
+    _serverDownIndicator.querySelector('.sd-close').addEventListener('click', () => {
+        hideServerDownIndicator()
+    })
+}
+
+function hideServerDownIndicator() {
+    if (!_serverDownIndicator) return
+    _serverDownIndicator.style.animation = 'judol-slide-out 0.3s ease-out forwards'
+    setTimeout(() => {
+        if (_serverDownIndicator && _serverDownIndicator.parentNode) {
+            _serverDownIndicator.parentNode.removeChild(_serverDownIndicator)
+        }
+        _serverDownIndicator = null
+    }, 300)
+}
+
 // ── EKSTRAKSI TEKS ──
 
 // Kata-kata yang sering menyebabkan false positive pada model teks.
@@ -590,6 +683,10 @@ chrome.runtime.onMessage.addListener((message) => {
 
     if (message.type === 'HIDE_LOADING') {
         hideLoadingIndicator()
+    }
+
+    if (message.type === 'API_DOWN') {
+        showServerDownIndicator()
     }
 
     if (message.type === 'SHOW_WARNING') { // Fallback if still sent
