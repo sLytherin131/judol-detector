@@ -73,6 +73,29 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
+    if (message.type === 'PAGE_RESULT_FROM_CACHE') {
+        // Content script punya cache lokal → simpan ke session storage agar popup bisa baca
+        const tabId = sender.tab?.id
+        if (!tabId) return
+        const result = message.result
+        saveResult(tabId, result).then(() => {
+            if (result && result.is_judol) {
+                chrome.action.setBadgeText({ text: '!', tabId })
+                chrome.action.setBadgeBackgroundColor({ color: '#EA4335', tabId })
+            } else {
+                chrome.action.setBadgeText({ text: '', tabId })
+            }
+            // Broadcast ke popup jika sedang terbuka
+            chrome.runtime.sendMessage({
+                type      : 'POPUP_RESULT',
+                tabId     : tabId,
+                result    : result,
+                fromCache : true
+            }).catch(() => {})
+        })
+        return
+    }
+
     if (message.type === 'PAGE_DATA') {
         const tabId = sender.tab.id
         const hostname = (() => { try { return new URL(message.url).hostname } catch { return '' } })()
@@ -80,6 +103,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Cek apakah ekstensi aktif (dari storage)
         chrome.storage.local.get(['isActive'], async (data) => {
             if (!data.isActive) return
+
+            // Guard: jika sudah ada deteksi berjalan untuk tab ini, skip (mencegah concurrent calls)
+            const detectingKey = `detecting_${tabId}`
+            const existingState = await new Promise(resolve => {
+                chrome.storage.session.get([detectingKey], d => resolve(d[detectingKey]))
+            })
+            if (existingState) {
+                console.log(`[background] Deteksi sudah berjalan untuk tab ${tabId}, request baru diabaikan.`)
+                return
+            }
+
+            // Tandai bahwa deteksi sedang berjalan (untuk popup yang dibuka saat deteksi)
+            await chrome.storage.session.set({ [`detecting_${tabId}`]: true })
+
+            // Broadcast ke popup bahwa deteksi dimulai (jika popup sudah terbuka)
+            chrome.runtime.sendMessage({ type: 'POPUP_DETECTING', tabId }).catch(() => {})
 
             let result = null
             let fromCache = false
@@ -101,8 +140,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // Jika API gagal (null), jangan simpan cache & jangan label apapun
                 if (!result) {
                     console.warn('[background] API tidak merespons, deteksi dilewati untuk halaman ini.')
+                    // Hapus flag detecting
+                    await chrome.storage.session.remove([`detecting_${tabId}`])
                     // Tampilkan notifikasi server down di content script
                     chrome.tabs.sendMessage(tabId, { type: 'API_DOWN' }).catch(() => {})
+                    // Broadcast ke popup juga
+                    chrome.runtime.sendMessage({ type: 'POPUP_API_DOWN', tabId }).catch(() => {})
                     return
                 }
 
@@ -120,12 +163,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Simpan ke session storage (untuk popup)
             await saveResult(tabId, result)
 
+            // Hapus flag detecting
+            await chrome.storage.session.remove([`detecting_${tabId}`])
+
             if (result.is_judol) {
                 chrome.action.setBadgeText({ text: '!', tabId })
                 chrome.action.setBadgeBackgroundColor({ color: '#EA4335', tabId })
             } else {
                 chrome.action.setBadgeText({ text: '', tabId })
             }
+
+            // Broadcast hasil ke popup (jika sedang terbuka)
+            chrome.runtime.sendMessage({
+                type      : 'POPUP_RESULT',
+                tabId     : tabId,
+                result    : result,
+                fromCache : fromCache
+            }).catch(() => {}) // abaikan jika popup tidak terbuka
 
             // Kirim hasil ke content script (tandai apakah dari cache)
             chrome.tabs.sendMessage(tabId, {
@@ -160,16 +214,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         (async () => {
             for (let attempt = 1; attempt <= API_RETRY_COUNT + 1; attempt++) {
                 try {
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+                    
                     const res = await fetch(`${API_URL}/predict-image`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ image_b64: message.base64 })
+                        body: JSON.stringify({ image_b64: message.base64 }),
+                        signal: controller.signal
                     })
+                    clearTimeout(timeoutId)
+                    
                     const result = await res.json()
                     sendResponse(result)
                     return
                 } catch (e) {
-                    console.warn(`[Judol Detector] PREDICT_IMAGE attempt ${attempt} gagal:`, e.message)
+                    const isTimeout = e.name === 'AbortError'
+                    console.warn(`[Judol Detector] PREDICT_IMAGE attempt ${attempt} gagal:`, isTimeout ? `timeout (${API_TIMEOUT/1000}s)` : e.message)
                     if (attempt < API_RETRY_COUNT + 1) {
                         await delay(API_RETRY_DELAY)
                     }
@@ -229,6 +290,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         })
         return true
     }
+
+    // Hapus session result untuk tab tertentu (dari popup)
+    if (message.type === 'CLEAR_RESULT') {
+        clearResult(message.tabId)
+    }
 });
 
 // Cek blocklist saat halaman dimuat
@@ -257,7 +323,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 // ── RETRY CONFIG ──
 const API_RETRY_COUNT = 2       // jumlah retry jika gagal (total percobaan = 3)
-const API_RETRY_DELAY = 5000    // delay antar retry dalam ms (5 detik, memberi waktu cold start)
+const API_RETRY_DELAY = 12000   // delay antar retry dalam ms (12 detik)
+const API_TIMEOUT = 12000       // timeout per request dalam ms (12 detik)
+// Minimum (instant fail): 2 delays × 12s      = 24 detik
+// Maximum (semua timeout): 3 × 12s + 2 × 12s = 60 detik
+// Safety timeout loading indicator (content.js) = 65 detik
 
 // ── HELPER: delay ──
 function delay(ms) {
@@ -266,11 +336,16 @@ function delay(ms) {
 
 // ── API CALL DENGAN RETRY ──
 // Jika server sedang cold start (forced restart setiap ~48 jam),
-// request pertama akan gagal/timeout. Retry otomatis setelah 5 detik.
+// request pertama akan gagal/timeout. Retry otomatis.
 async function callAPI(data) {
     for (let attempt = 1; attempt <= API_RETRY_COUNT + 1; attempt++) {
         try {
             const startTime = performance.now()
+            
+            // Timeout per request agar tidak menunggu terlalu lama
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+            
             const response = await fetch(`${API_URL}/predict`, {
                 method : 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -279,14 +354,18 @@ async function callAPI(data) {
                     image_b64 : data.mainImage,
                     images_b64: data.images,
                     url       : data.url
-                })
+                }),
+                signal: controller.signal
             })
+            clearTimeout(timeoutId)
+            
             const result = await response.json()
             const endTime = performance.now()
             console.log(`[Judol Detector] API latency: ${Math.round(endTime - startTime)}ms (attempt ${attempt})`)
             return result
         } catch (e) {
-            console.warn(`[Judol Detector] API attempt ${attempt} gagal:`, e.message)
+            const isTimeout = e.name === 'AbortError'
+            console.warn(`[Judol Detector] API attempt ${attempt} gagal:`, isTimeout ? `timeout (${API_TIMEOUT/1000}s)` : e.message)
             if (attempt < API_RETRY_COUNT + 1) {
                 console.log(`[Judol Detector] Retry dalam ${API_RETRY_DELAY / 1000} detik...`)
                 await delay(API_RETRY_DELAY)

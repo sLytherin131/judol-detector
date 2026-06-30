@@ -503,6 +503,21 @@
             flex-shrink: 0;
         }
 
+        /* ── DETECTING SPINNER ── */
+        .detecting-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e4e4e4;
+            border-top-color: #555;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
 
     </style>
 </head>
@@ -510,7 +525,7 @@
 
 <div class="header">
     <div class="brand">
-        <img src="../icons/icon_JD.png" class="brand-logo" alt="Logo">
+        <img src="../icons/jd_trans.png" class="brand-logo" alt="Logo">
         <span class="brand-name">Judol Detector</span>
     </div>
     <div class="header-status">
@@ -552,6 +567,23 @@
             <span class="status-safe-text">Halaman ini aman</span>
         </div>
         <span class="status-safe-sub">Tidak ada konten promosi judi online</span>
+    </div>
+
+    <!-- Detecting state: tampil saat sedang menunggu hasil deteksi -->
+    <div class="status-card" id="detectingCard" style="display:none">
+        <div class="status-safe-title">
+            <div class="detecting-spinner"></div>
+            <span class="status-safe-text" style="color: var(--text-2);">Mendeteksi halaman...</span>
+        </div>
+    </div>
+
+    <!-- Server down state -->
+    <div class="status-card" id="serverDownCard" style="display:none; border-color: var(--danger-border);">
+        <div class="status-safe-title">
+            <div class="status-safe-dot" style="background: var(--danger);"></div>
+            <span class="status-safe-text" style="color: var(--danger);">Server tidak tersedia</span>
+        </div>
+        <span class="status-safe-sub" style="color: #aa2222;">Coba lagi dalam beberapa saat</span>
     </div>
 
     <!-- Detection panel: muncul saat judol terdeteksi, berisi warning + skor + aksi -->
@@ -634,7 +666,7 @@
     </a>
 </div>
 
-<div class="version-strip">v1.0.0</div>
+<div class="version-strip">v1.2.0</div>
 
 <script src="popup.js"></script>
 </body>

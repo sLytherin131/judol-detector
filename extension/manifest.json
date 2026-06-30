@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Judol Detector",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Deteksi konten promosi judi online secara real-time",
   "permissions": [
     "activeTab",
@@ -17,6 +17,11 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content/content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.aduankonten.id/*"],
+      "js": ["content/komdigi.js"],
       "run_at": "document_idle"
     }
   ],

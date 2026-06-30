@@ -1,8 +1,18 @@
+// ── GUARD: Cegah double injection (saat popup inject manual ke tab yang sudah punya content script) ──
+// Gunakan window property (bukan let) agar bisa dicek sebelum script dieksekusi ulang
+if (window.__judolDetectorInjected) {
+    // Script sudah pernah di-inject, jangan jalankan ulang
+} else {
+window.__judolDetectorInjected = true;
+
 // ── LOADING INDICATOR ──
 // Menampilkan indikator loading kecil di pojok kanan bawah saat deteksi berlangsung
 let _loadingIndicator = null
 
 function showLoadingIndicator() {
+    // Sembunyikan server down indicator agar tidak bertumpuk
+    hideServerDownIndicator()
+
     // Jangan tampilkan jika sudah ada
     if (_loadingIndicator) return
 
@@ -69,8 +79,11 @@ function showLoadingIndicator() {
     `
     document.body.appendChild(_loadingIndicator)
 
-    // Safety timeout: sembunyikan loading setelah 30 detik (jika ada error/network issue)
-    setTimeout(() => hideLoadingIndicator(), 30000)
+    // Safety timeout: sembunyikan loading setelah 65 detik
+    // Harus LEBIH LAMA dari total waktu retry maksimal di background.js:
+    // Maximum retry = 3 attempts × 12s timeout + 2 delays × 12s = 60 detik
+    // 65 detik = buffer 5s agar loading tidak hilang duluan sebelum API_DOWN diterima
+    setTimeout(() => hideLoadingIndicator(), 65000)
 }
 
 function hideLoadingIndicator() {
@@ -117,10 +130,6 @@ function showServerDownIndicator() {
                 animation: judol-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 border: 1px solid #ffc9c9;
             }
-            #judol-server-down .sd-icon {
-                font-size: 14px;
-                line-height: 1;
-            }
             #judol-server-down .sd-text {
                 font-weight: 600;
                 font-size: 12px;
@@ -156,7 +165,6 @@ function showServerDownIndicator() {
                 to   { opacity: 0; transform: translateY(16px) scale(0.96); }
             }
         </style>
-        <span class="sd-icon">⚠️</span>
         <span class="sd-text">Server sedang tidak tersedia</span>
         <button class="sd-close" title="Tutup">✕</button>
     `
@@ -166,6 +174,9 @@ function showServerDownIndicator() {
     _serverDownIndicator.querySelector('.sd-close').addEventListener('click', () => {
         hideServerDownIndicator()
     })
+
+    // Auto-hide setelah 30 detik
+    setTimeout(() => hideServerDownIndicator(), 30000)
 }
 
 function hideServerDownIndicator() {
@@ -743,11 +754,34 @@ chrome.runtime.onMessage.addListener((message) => {
             isFromCache = false;
             wasCachedAtStartup = false;
         } else {
-            // Jalankan ulang deteksi halaman
+            // Jalankan ulang deteksi halaman — cek cache dulu, jangan scan ulang jika ada
             hasShownWarning = false;
             isFromCache = false;
             wasCachedAtStartup = false;
-            collectAndSend();
+
+            const hostname = getCurrentHostname()
+            getCacheFromBackground(hostname).then(cached => {
+                if (cached) {
+                    // Ada cache — gunakan cache, jangan scan ulang
+                    if (cached.is_judol) {
+                        isPageJudol = true
+                        isFromCache = true
+                        wasCachedAtStartup = true
+                        hasShownWarning = true
+                        applyBlurFromCache(cached)
+                    } else {
+                        wasCachedAtStartup = true
+                    }
+                    safeSendMessage({
+                        type      : 'PAGE_RESULT_FROM_CACHE',
+                        result    : cached.result,
+                        fromCache : true
+                    }, () => {})
+                } else {
+                    // Tidak ada cache — scan baru
+                    collectAndSend()
+                }
+            })
         }
     }
 })
@@ -779,7 +813,7 @@ function showFloatingWarning(result) {
     }
 
     // URL logo harus dihitung sebelum masuk ke innerHTML
-    const logoUrl = chrome.runtime.getURL('icons/Icon_JD.png');
+    const logoUrl = chrome.runtime.getURL('icons/jd_trans.png');
 
     const overlay = document.createElement('div');
     overlay.id = 'judol-warning-banner';
@@ -934,7 +968,9 @@ function showFloatingWarning(result) {
     });
 
     overlay.querySelector('#jd-btn-report').addEventListener('click', () => {
-        window.open('https://aduankonten.id/', '_blank');
+        // Copy URL halaman ke clipboard
+        navigator.clipboard.writeText(window.location.href).catch(() => {})
+        window.open('https://aduankonten.id/?from=judol', '_blank');
     });
 
     document.body.prepend(overlay);
@@ -1342,8 +1378,13 @@ if (isExtensionAlive()) {
                 wasCachedAtStartup = true
                 hasShownWarning = true // skip warning overlay
 
-                // Kirim data agar popup bisa menampilkan hasil (background akan pakai cache)
-                collectAndSend()
+                // Simpan hasil ke session storage agar popup bisa menampilkan hasil
+                // tanpa perlu trigger API call ulang
+                safeSendMessage({
+                    type      : 'PAGE_RESULT_FROM_CACHE',
+                    result    : cached.result,
+                    fromCache : true
+                }, () => {})
 
                 // Langsung blur dari cache jika sensor aktif
                 applyBlurFromCache(cached)
@@ -1352,8 +1393,7 @@ if (isExtensionAlive()) {
                 // ── JALUR CEPAT: sudah pernah dideteksi AMAN sebelumnya ──
                 console.log('[Judol Detector] Cache: Domain terdeteksi aman, scan dilewati.')
                 wasCachedAtStartup = true
-                // Tetap kirim ke background agar session storage terisi (untuk popup)
-                collectAndSend()
+                // Tidak perlu scan ulang — popup akan baca dari session storage via GET_RESULT
 
             } else {
                 // ── BELUM ADA CACHE: hanya detect jika tab VISIBLE ──
@@ -1376,12 +1416,16 @@ if (isExtensionAlive()) {
                                         isFromCache = true
                                         wasCachedAtStartup = true
                                         hasShownWarning = true
-                                        collectAndSend()
                                         applyBlurFromCache(freshCache)
                                     } else {
                                         wasCachedAtStartup = true
-                                        collectAndSend()
                                     }
+                                    // Simpan ke session storage via background
+                                    safeSendMessage({
+                                        type      : 'PAGE_RESULT_FROM_CACHE',
+                                        result    : freshCache.result,
+                                        fromCache : true
+                                    }, () => {})
                                 } else {
                                     console.log('[Judol Detector] Tab sekarang visible, memulai deteksi...')
                                     collectAndSend()
@@ -1417,3 +1461,5 @@ if (isExtensionAlive()) {
         }
     })
 }
+
+} // end of double-injection guard

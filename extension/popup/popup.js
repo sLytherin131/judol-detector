@@ -1,4 +1,4 @@
-const KOMDIGI_URL = 'https://aduankonten.id/';
+const KOMDIGI_URL = 'https://aduankonten.id/?from=judol';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -15,7 +15,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load detection result for this tab
     chrome.runtime.sendMessage({ type: 'GET_RESULT', tabId: tab.id }, result => {
         if (chrome.runtime.lastError) return;
-        if (result) showResult(result);
+        if (result) {
+            showResult(result);
+        } else {
+            // Cek apakah deteksi sedang berjalan (via session storage flag)
+            chrome.storage.session.get([`detecting_${tab.id}`], data => {
+                if (data[`detecting_${tab.id}`]) {
+                    showDetecting();
+                }
+            });
+        }
+    });
+
+    // Listen for real-time detection results from background
+    chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'POPUP_DETECTING' && message.tabId === tab.id) {
+            showDetecting();
+        }
+        if (message.type === 'POPUP_RESULT' && message.tabId === tab.id) {
+            hideDetecting();
+            showResult(message.result);
+            // Update cache info jika dari cache
+            if (message.fromCache) {
+                document.getElementById('cacheInfo').style.display = 'block';
+            }
+        }
+        if (message.type === 'POPUP_API_DOWN' && message.tabId === tab.id) {
+            hideDetecting();
+            showServerDown();
+        }
     });
 
     // Cek apakah hasil untuk tab ini dari cache
@@ -30,18 +58,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Toggle ekstensi
-    document.getElementById('toggleExtension').addEventListener('change', e => {
+    document.getElementById('toggleExtension').addEventListener('change', async e => {
         const next = e.target.checked;
         chrome.storage.local.set({ isActive: next });
         setStatus(next);
-        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_EXTENSION', active: next }).catch(() => {});
+
+        // Saat toggle ON, reset UI dan tampilkan detecting state
+        if (next) {
+            document.getElementById('statusSafeCard').style.display = 'none';
+            document.getElementById('detectionPanel').style.display = 'none';
+            document.getElementById('serverDownCard').style.display = 'none';
+            showDetecting();
+        } else {
+            // Toggle OFF — sembunyikan semua result
+            hideDetecting();
+            document.getElementById('statusSafeCard').style.display = 'none';
+            document.getElementById('detectionPanel').style.display = 'none';
+            document.getElementById('serverDownCard').style.display = 'none';
+        }
+
+        // Coba kirim pesan ke content script
+        try {
+            await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_EXTENSION', active: next });
+        } catch (err) {
+            // Content script belum ter-inject (tab dibuka sebelum ekstensi aktif/diinstall)
+            // Inject secara manual lalu kirim ulang pesan
+            if (next) {
+                try {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['content/content.js']
+                    });
+                    // Tunggu sebentar agar script selesai inisialisasi
+                    await new Promise(r => setTimeout(r, 200));
+                    await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_EXTENSION', active: next });
+                } catch (injectErr) {
+                    // Gagal inject (misal: chrome://, about:, dll) — abaikan
+                    console.warn('[popup] Gagal inject content script:', injectErr.message);
+                }
+            }
+        }
     });
 
     // Toggle sensor
-    document.getElementById('toggleSensor').addEventListener('change', e => {
+    document.getElementById('toggleSensor').addEventListener('change', async e => {
         const next = e.target.checked;
         chrome.storage.local.set({ sensorActive: next });
-        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SENSOR', active: next }).catch(() => {});
+        try {
+            await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SENSOR', active: next });
+        } catch (err) {
+            // Content script belum ter-inject
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content/content.js']
+                });
+                await new Promise(r => setTimeout(r, 200));
+                await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SENSOR', active: next });
+            } catch (injectErr) {
+                console.warn('[popup] Gagal inject content script:', injectErr.message);
+            }
+        }
     });
 
     // Action buttons
@@ -53,7 +130,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.close();
     });
 
-    document.getElementById('btnReport').addEventListener('click', () => {
+    document.getElementById('btnReport').addEventListener('click', async () => {
+        // Copy URL tab saat ini ke clipboard
+        try {
+            await navigator.clipboard.writeText(tab.url);
+        } catch (e) {
+            // Clipboard gagal, tetap buka Komdigi
+        }
         chrome.tabs.create({ url: KOMDIGI_URL });
     });
 
@@ -67,10 +150,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         chrome.runtime.sendMessage({ type: 'CLEAR_ALL_CACHE' }, response => {
             if (chrome.runtime.lastError) return;
+
+            // Sembunyikan semua result card di popup
+            document.getElementById('detectionPanel').style.display = 'none';
+            document.getElementById('statusSafeCard').style.display = 'none';
+            document.getElementById('serverDownCard').style.display = 'none';
+            document.getElementById('cacheInfo').style.display = 'none';
+
+            // Hapus session result untuk tab ini agar tidak muncul lagi
+            chrome.runtime.sendMessage({ type: 'CLEAR_RESULT', tabId: tab.id });
+
+            // Hapus badge
+            chrome.action.setBadgeText({ text: '', tabId: tab.id });
+
+            // Feedback visual
             const link = document.getElementById('linkClearCache');
             link.textContent = 'Cache dihapus';
             link.style.color = 'var(--success)';
-            document.getElementById('cacheInfo').style.display = 'none';
             setTimeout(() => {
                 link.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -104,6 +200,10 @@ function setStatus(active) {
 }
 
 function showResult(result) {
+    // Sembunyikan semua state card lain
+    hideDetecting();
+    document.getElementById('serverDownCard').style.display = 'none';
+
     const pct = v => Math.round(v * 100);
 
     const vals = {
@@ -142,4 +242,23 @@ function showResult(result) {
         const safeCard = document.getElementById('statusSafeCard');
         safeCard.style.display = 'flex';
     }
+}
+
+function showDetecting() {
+    // Sembunyikan card lain
+    document.getElementById('statusSafeCard').style.display = 'none';
+    document.getElementById('detectionPanel').style.display = 'none';
+    document.getElementById('serverDownCard').style.display = 'none';
+    document.getElementById('detectingCard').style.display = 'flex';
+}
+
+function hideDetecting() {
+    document.getElementById('detectingCard').style.display = 'none';
+}
+
+function showServerDown() {
+    document.getElementById('statusSafeCard').style.display = 'none';
+    document.getElementById('detectionPanel').style.display = 'none';
+    document.getElementById('detectingCard').style.display = 'none';
+    document.getElementById('serverDownCard').style.display = 'flex';
 }

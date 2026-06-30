@@ -281,6 +281,20 @@ nav a:hover {
     line-height: 1.7;
     margin-bottom: 28px;
     max-width: 460px;
+    min-height: calc(16px * 1.7 * 3); /* reserve 3 lines height to prevent layout shift */
+}
+
+.typewriter-cursor {
+    display: inline-block;
+    color: var(--text-2);
+    font-weight: 300;
+    animation: tw-blink 0.8s step-end infinite;
+    margin-left: 1px;
+}
+
+@keyframes tw-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
 }
 
 .hero-cta {
@@ -535,103 +549,256 @@ nav a:hover {
     margin-bottom: 48px;
 }
 
-/* ─── CARA KERJA ─────────────────────────────────────────── */
-.steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: var(--r-l);
+/* ─── CARA KERJA — Card Stack ────────────────────────────── */
+.ck-stage {
+    position: relative;
+    max-width: 400px;
+    margin: 32px auto 0;
+    user-select: none;
+}
+
+/* The stack container */
+.ck-stack {
+    position: relative;
+    overflow: hidden;        /* clip cards peeking below */
+    padding-bottom: 56px;    /* peek space */
+}
+
+/* Each card — natural height, stacked absolutely */
+.ck-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: #111111;
+    border-radius: 20px;
+    padding: 24px 22px 22px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    cursor: pointer;
     overflow: hidden;
+    transition: transform 0.45s cubic-bezier(0.4,0,0.2,1),
+                opacity  0.45s ease;
+    will-change: transform, opacity;
 }
 
-.step {
-    background: white;
-    padding: 28px 24px;
-}
-
-.step-num {
+.ck-num {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--text-3);
-    margin-bottom: 14px;
-    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.45);
 }
 
-.step h3 {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 8px;
-    letter-spacing: -0.01em;
+.ck-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
-.step p {
-    font-size: 13.5px;
-    color: var(--text-2);
+.ck-img-wrap {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #222;
+    flex-shrink: 0;
+}
+
+.ck-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.ck-desc {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
     line-height: 1.65;
+    margin: 0;
+    text-align: justify;
+}
+
+/* Dots */
+.ck-dots {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 20px;
+}
+
+.ck-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border-dark);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.ck-dot.active {
+    background: var(--accent);
+    transform: scale(1.35);
 }
 
 /* ─── FITUR ──────────────────────────────────────────────── */
 .features {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: var(--r-l);
-    overflow: hidden;
+    gap: 20px;
 }
 
 .feature {
     background: white;
-    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-l);
+    overflow: hidden;
     display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    transition: background 0.15s;
+    flex-direction: column;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    cursor: pointer;
 }
 
-.feature:hover { background: #fafafa; }
+.feature:hover {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border-color: #d0d0d0;
+}
+
+.feature-text {
+    padding: 20px 22px 24px;
+}
 
 .feature-icon {
-    width: 34px;
-    height: 34px;
-    background: var(--accent-light);
-    border: 1px solid var(--accent-mid);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent);
-    flex-shrink: 0;
+    display: none;
 }
 
-.feature-icon svg { width: 16px; height: 16px; }
-
 .feature h3 {
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     letter-spacing: -0.01em;
 }
 
 .feature p {
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--text-2);
     line-height: 1.6;
+    margin: 0;
 }
+
+/* ── Feature video ── */
+.feature-video-wrap {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #f0f0f0;
+    overflow: hidden;
+    position: relative;
+    cursor: zoom-in;
+    flex-shrink: 0;
+}
+
+.feature-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.feature:hover .feature-video {
+    transform: scale(1.03);
+}
+
+/* lightbox overlay */
+.fv-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+    animation: fv-fadein 0.2s ease;
+}
+
+@keyframes fv-fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.fv-lightbox video {
+    max-width: min(900px, 92vw);
+    max-height: 88vh;
+    border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    cursor: default;
+    animation: fv-scalein 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fv-scalein {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+.fv-lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.fv-lightbox-close:hover { background: rgba(255,255,255,0.3); }
 
 /* ─── INSTALL ────────────────────────────────────────────── */
 .install-grid {
     display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 40px;
-    align-items: start;
+    grid-template-columns: 300px 1fr;
+    gap: 48px;
+    align-items: center;
     margin-top: 0;
+}
+
+/* Left brand column */
+.install-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.install-brand-logo {
+    width: 240px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.install-brand-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.01em;
 }
 
 .install-list {
@@ -683,45 +850,45 @@ nav a:hover {
     line-height: 1.55;
 }
 
-.install-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--r-l);
-    padding: 24px;
-    position: sticky;
-    top: 76px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+/* Footer: version / date / download */
+.install-footer {
+    margin-top: 32px;
+    border-top: 1px solid var(--border);
 }
 
-.install-card-icon {
-    width: 40px;
-    height: 40px;
-    background: var(--text);
-    border-radius: 10px;
+.install-footer-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    color: white;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--border);
 }
 
-.install-card-icon svg { width: 18px; height: 18px; }
-
-.install-card-meta strong {
-    display: block;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px;
-}
-
-.install-card-meta span {
-    font-size: 12px;
+.install-footer-label {
+    font-size: 13px;
     color: var(--text-3);
+    font-weight: 500;
 }
 
-.install-card .btn-primary { width: 100%; justify-content: center; }
+.install-footer-value {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.install-download {
+    display: flex;
+    justify-content: center;
+    margin: 24px auto 0;
+    min-width: 220px;
+    width: fit-content;
+    animation: btn-float 2.2s ease-in-out infinite;
+}
+
+@keyframes btn-float {
+    0%,  100% { transform: translateY(0); }
+    50%        { transform: translateY(-7px); }
+}
 
 .install-note {
     font-size: 11.5px;
@@ -781,10 +948,10 @@ code {
 @media (max-width: 960px) {
     .hero-inner { grid-template-columns: 1fr; gap: 40px; }
     .hero p { max-width: 100%; }
-    .steps { grid-template-columns: 1fr; }
     .features { grid-template-columns: 1fr 1fr; }
     .install-grid { grid-template-columns: 1fr; }
-    .install-card { position: static; }
+    .install-brand { flex-direction: column; align-items: center; text-align: center; }
+    .install-brand-logo { width: 120px; }
 }
 
 @media (max-width: 640px) {
@@ -794,4 +961,61 @@ code {
     nav a:not(.nav-cta) { display: none; }
     .features { grid-template-columns: 1fr; }
     .footer-inner { flex-direction: column; align-items: flex-start; }
+    .ck-stage { max-width: 100%; }
+    .ck-stack { height: auto; min-height: 480px; }
+    .ck-title { font-size: 17px; }
+}
+
+/* ─── INTRO SPLASH ───────────────────────────────────────── */
+#intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0a;
+    z-index: 99999;
+    pointer-events: none;
+}
+
+#intro-logo {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    z-index: 100000;
+    pointer-events: none;
+}
+
+/* ─── CARD EQUAL HEIGHT ──────────────────────────────────── */
+.ck-card {
+    min-height: 480px;
+}
+
+/* ─── WORD REVEAL ON SCROLL ──────────────────────────────── */
+.reveal-words .word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.reveal-words.revealed .word {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ─── LOGO SPIN + GROW ON SCROLL ─────────────────────────── */
+.scroll-spin-grow {
+    transform: scale(0.15) rotate(0deg);
+    opacity: 0;
+    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.4s ease;
+    transform-origin: center center;
+}
+
+.scroll-spin-grow.spin-done {
+    transform: scale(1) rotate(720deg);
+    opacity: 1;
 }

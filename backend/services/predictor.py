@@ -64,8 +64,8 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────
 MODEL_READY = True   # ← ubah True setelah semua bobot tersedia
 
-THRESHOLD        = 0.69   # ← threshold saat ada gambar (multimodal)
-THRESHOLD_TEXT_ONLY = 0.85   # ← threshold lebih ketat saat tidak ada gambar sama sekali
+THRESHOLD        = 0.60   # ← threshold saat ada gambar (multimodal)
+THRESHOLD_TEXT_ONLY = 0.70   # ← threshold lebih ketat saat tidak ada gambar sama sekali
                               #   mencegah false positive pada halaman yang sekadar membahas judol
 
 # Default alpha (override oleh late_fusion_alpha.json jika ada)
@@ -392,9 +392,9 @@ img_transform = transforms.Compose([
 
 # Kalibrasi Probabilitas (mencegah model selalu 100% confidence / terlalu sensitif)
 # Jika teks non-judol dianggap judol dengan confidence terlalu tinggi, naikkan nilai TEMPERATURE_TEXT (misal 2.0 atau 2.5)
-TEMPERATURE_TEXT   = 6.5
-TEMPERATURE_IMAGE  = 1.0  
-TEMPERATURE_FUSION = 4.5
+TEMPERATURE_TEXT   = 6.8
+TEMPERATURE_IMAGE  = 2.5
+TEMPERATURE_FUSION = 4.0
 
 
 def _decode_image_safe(b64_str: str | None) -> torch.Tensor | None:

@@ -7,15 +7,19 @@
     <meta name="description" content="Ekstensi Chrome yang mendeteksi dan memblokir konten promosi judi online secara otomatis menggunakan AI.">
 <meta name="application-name" content="Judol Detector">
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="icon" type="image/png" href="images/icon128.png">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
+<!-- ── Intro splash overlay ── -->
+<div id="intro-overlay"></div>
+<img id="intro-logo" src="images/jd_white_logo.png" alt="">
+
 <header class="site-nav" id="siteNav">
     <div class="nav-inner">
         <a href="#" class="logo">
-            <img src="images/Icon_JD.png" class="logo-img-nav" alt="Judol Detector">
+            <img src="images/jd_trans.png" class="logo-img-nav" id="nav-logo" alt="Judol Detector">
             <span><strong>Judol Detector</strong></span>
         </a>
         <nav>
@@ -35,7 +39,7 @@
                 <div class="hero-eyebrow">
                 </div>
                 <h1>Browsing <u>tanpa</u><br>jebakan <u>judi online</u>.</h1>
-                <p>Judol Detector memindai setiap halaman yang Anda buka dan memberi peringatan saat menemukan promosi judi online berupa teks maupun gambar.</p>
+                <p><span id="hero-typewriter"></span><span class="typewriter-cursor">|</span></p>
                 <div class="hero-cta">
                     <a href="#install" class="btn-primary">
                         Download Ekstensi
@@ -58,25 +62,50 @@
     <section id="cara-kerja" class="section section-white">
         <div class="section-inner">
             <div class="section-tag">Cara Kerja</div>
-            <h2>Otomatis, tanpa konfigurasi.</h2>
+            <h2 class="reveal-words">Otomatis, tanpa konfigurasi.</h2>
             <p class="section-sub">Pasang ekstensi, aktifkan, selesai. Tidak ada pengaturan yang perlu diisi.</p>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-num">01</div>
-                    <h3>Pemindaian otomatis</h3>
-                    <p>Setiap halaman yang Anda buka dipindai secara otomatis. Teks dan gambar dianalisis di background tanpa memperlambat browser.</p>
+
+            <!-- Card stack slider -->
+            <div class="ck-stage">
+                <div class="ck-stack">
+
+                    <div class="ck-card" data-idx="0">
+                        <div class="ck-num">01</div>
+                        <div class="ck-title">Pemindaian otomatis</div>
+                        <div class="ck-img-wrap">
+                            <img src="images/1.png" alt="Pemindaian otomatis" class="ck-img">
+                        </div>
+                        <p class="ck-desc">Setiap halaman yang Anda buka dipindai secara otomatis. Teks dan gambar dianalisis di background tanpa memperlambat browser.</p>
+                    </div>
+
+                    <div class="ck-card" data-idx="1">
+                        <div class="ck-num">02</div>
+                        <div class="ck-title">Deteksi berbasis AI</div>
+                        <div class="ck-img-wrap">
+                            <img src="images/2.png" alt="Deteksi berbasis AI" class="ck-img">
+                        </div>
+                        <p class="ck-desc">Menggunakan tiga model gabungan yang sudah dilatih untuk memperoleh hasil deteksi yang lebih akurat.</p>
+                    </div>
+
+                    <div class="ck-card" data-idx="2">
+                        <div class="ck-num">03</div>
+                        <div class="ck-title">Peringatan & tindakan</div>
+                        <div class="ck-img-wrap">
+                            <img src="images/3.png" alt="Peringatan & tindakan" class="ck-img">
+                        </div>
+                        <p class="ck-desc">Jika terdeteksi, muncul notifikasi di popup. Anda bisa blokir situs, aktifkan sensor konten, atau lapor ke Komdigi dengan satu klik.</p>
+                    </div>
+
                 </div>
-                <div class="step">
-                    <div class="step-num">02</div>
-                    <h3>Deteksi berbasis AI</h3>
-                    <p>Menggunakan tiga model gabungan yang sudah dilatih untuk memperoleh hasil deteksi yang lebih akurat.</p>
-                </div>
-                <div class="step">
-                    <div class="step-num">03</div>
-                    <h3>Peringatan & tindakan</h3>
-                    <p>Jika terdeteksi, muncul notifikasi di popup. Anda bisa blokir situs, aktifkan sensor konten, atau lapor ke Komdigi dengan satu klik.</p>
+
+                <!-- Dots -->
+                <div class="ck-dots">
+                    <button class="ck-dot active" data-idx="0"></button>
+                    <button class="ck-dot" data-idx="1"></button>
+                    <button class="ck-dot" data-idx="2"></button>
                 </div>
             </div>
+
         </div>
     </section>
 
@@ -84,33 +113,41 @@
     <section id="fitur" class="section">
         <div class="section-inner">
             <div class="section-tag">Fitur</div>
-            <h2>Apa yang bisa dilakukan.</h2>
+            <h2 class="reveal-words">Apa yang bisa dilakukan.</h2>
             <p class="section-sub"></p>
             <div class="features">
                 <div class="feature">
-                    <div class="feature-icon"><i data-lucide="scan-text"></i></div>
-                    <div>
+                    <div class="feature-video-wrap">
+                        <video class="feature-video" src="videos/Deteksi_teks_gambar.mp4" muted autoplay loop playsinline></video>
+                    </div>
+                    <div class="feature-text">
                         <h3>Deteksi teks & gambar</h3>
                         <p>Menggunakan model teks dan gambar yang jalan bersamaan dan hasilnya digabung untuk akurasi lebih tinggi.</p>
                     </div>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon"><i data-lucide="eye-off"></i></div>
-                    <div>
+                    <div class="feature-video-wrap">
+                        <video class="feature-video" src="videos/Mode_sensor.mp4" muted autoplay loop playsinline></video>
+                    </div>
+                    <div class="feature-text">
                         <h3>Mode sensor / blur</h3>
                         <p>Konten yang terdeteksi bisa di-blur otomatis. Halaman tetap bisa diakses, tapi konten judolnya tidak langsung terlihat.</p>
                     </div>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon"><i data-lucide="ban"></i></div>
-                    <div>
+                    <div class="feature-video-wrap">
+                        <video class="feature-video" src="videos/Daftar_blokir.mp4" muted autoplay loop playsinline></video>
+                    </div>
+                    <div class="feature-text">
                         <h3>Daftar blokir</h3>
                         <p>Domain yang diblokir tersimpan lokal di browser. Bisa tambah manual, cari, atau hapus kapan saja dari halaman daftar blokir.</p>
                     </div>
                 </div>
                 <div class="feature">
-                    <div class="feature-icon"><i data-lucide="megaphone"></i></div>
-                    <div>
+                    <div class="feature-video-wrap">
+                        <video class="feature-video" src="videos/Lapor.mp4" muted autoplay loop playsinline></video>
+                    </div>
+                    <div class="feature-text">
                         <h3>Lapor ke Komdigi</h3>
                         <p>Satu klik buka platform aduan resmi Kementerian Komunikasi dan Digital untuk melaporkan situs yang terdeteksi.</p>
                     </div>
@@ -123,9 +160,16 @@
     <section id="install" class="section section-white">
         <div class="section-inner">
             <div class="section-tag">Instalasi</div>
-            <h2>Cara pasang di browser.</h2>
+            <h2 class="reveal-words">Cara pasang di browser.</h2>
             <p class="section-sub">Ekstensi ini belum ada di Chrome Web Store, jadi instalasinya manual. Butuh sekitar 2 menit.</p>
             <div class="install-grid">
+                <!-- Left: Logo -->
+                <div class="install-brand">
+                    <img src="images/jd_trans.png" class="install-brand-logo scroll-spin-grow" alt="Judol Detector">
+                    <span class="install-brand-name">Judol Detector</span>
+                </div>
+
+                <!-- Right: Steps -->
                 <ol class="install-list">
                     <li class="install-item">
                         <div class="install-num">1</div>
@@ -156,22 +200,22 @@
                         </div>
                     </li>
                 </ol>
+            </div>
 
-                <div class="install-card">
-                    <div class="install-card-brand">
-                        <div class="install-card-icon">
-                            <img src="images/Icon_JD.png" class="install-card-logo" alt="Judol Detector">
-                        </div>
-                        <div class="install-card-meta">
-                            <strong>Judol Detector v1.0.0</strong>
-                            <span>Ukuran · 365 KB</span>
-                        </div>
-                    </div>
-                    <a href="judol-detector-ext.zip" download class="btn-primary">
-                        <i data-lucide="download"></i>
-                        Download ZIP
-                    </a>
+            <!-- Bottom: Version / Date / Download -->
+            <div class="install-footer">
+                <div class="install-footer-row">
+                    <span class="install-footer-label">Versi</span>
+                    <span class="install-footer-value">1.2.0</span>
                 </div>
+                <div class="install-footer-row">
+                    <span class="install-footer-label">Tanggal rilis</span>
+                    <span class="install-footer-value">17 Juni 2026</span>
+                </div>
+                <a href="judol-detector-ext.zip" download class="btn-primary install-download">
+                    <i data-lucide="download"></i>
+                    Download ZIP
+                </a>
             </div>
         </div>
     </section>
@@ -182,7 +226,7 @@
     <div class="footer-inner">
         <div class="footer-brand">
             <div class="logo">
-                <img src="images/Icon_JD.png" class="logo-img-nav" alt="Judol Detector">
+                <img src="images/jd_trans.png" class="logo-img-nav" alt="Judol Detector">
                 <span><strong>Judol Detector</strong></span>
             </div>
             <p>Ekstensi deteksi konten promosi judi online untuk pengguna internet Indonesia.</p>
