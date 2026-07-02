@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 import asyncio
-from schemas.request import PredictRequest, PredictResponse, PredictImageRequest
-from services.predictor import predict_all, predict_image_solo
+from schemas.request import PredictRequest, PredictResponse, PredictImageRequest, PredictTextRequest
+from services.predictor import predict_all, predict_image_solo, predict_text_solo
 
 router = APIRouter()
 
@@ -48,6 +48,26 @@ async def predict_image(request: PredictImageRequest):
         conf = await asyncio.to_thread(predict_image_solo, request.image_b64)
         is_judol = conf >= 0.5
         print(f"[API /predict-image] conf={conf:.4f} → is_judol={is_judol}")
+        return {
+            "is_judol"  : is_judol,
+            "confidence": round(conf, 4),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────
+# POST /predict-text   →  text-only (IndoBERT solo)
+# ─────────────────────────────────────────────────────────
+@router.post("/predict-text")
+async def predict_text(request: PredictTextRequest):
+    """Prediksi hanya dari teks menggunakan IndoBERT solo."""
+    try:
+        print(f"[API /predict-text] text='{request.text[:50]}...'")
+        # Run CPU-bound prediction in thread pool (non-blocking)
+        conf = await asyncio.to_thread(predict_text_solo, request.text)
+        is_judol = conf >= 0.5
+        print(f"[API /predict-text] conf={conf:.4f} → is_judol={is_judol}")
         return {
             "is_judol"  : is_judol,
             "confidence": round(conf, 4),

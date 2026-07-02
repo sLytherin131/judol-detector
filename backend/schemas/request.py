@@ -17,3 +17,6 @@ class PredictResponse(BaseModel):
 
 class PredictImageRequest(BaseModel):
     image_b64: str
+
+class PredictTextRequest(BaseModel):
+    text: str

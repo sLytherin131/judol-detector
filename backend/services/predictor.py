@@ -391,10 +391,19 @@ img_transform = transforms.Compose([
 ])
 
 # Kalibrasi Probabilitas (mencegah model selalu 100% confidence / terlalu sensitif)
-# Jika teks non-judol dianggap judol dengan confidence terlalu tinggi, naikkan nilai TEMPERATURE_TEXT (misal 2.0 atau 2.5)
-TEMPERATURE_TEXT   = 6.8
-TEMPERATURE_IMAGE  = 2.5
-TEMPERATURE_FUSION = 4.0
+# ─────────────────────────────────────────────────────────────
+# TEMPERATURE UNTUK DETEKSI WEB AWAL (predict_all)
+# ─────────────────────────────────────────────────────────────
+DETECTION_TEMPERATURE_TEXT   = 6.8
+DETECTION_TEMPERATURE_IMAGE  = 4.0
+DETECTION_TEMPERATURE_FUSION = 4.5
+
+# ─────────────────────────────────────────────────────────────
+# TEMPERATURE UNTUK FITUR SENSOR / BLUR (solo predictions)
+# ─────────────────────────────────────────────────────────────
+SENSOR_TEMPERATURE_TEXT   = 6.8
+SENSOR_TEMPERATURE_IMAGE  = 2.0
+SENSOR_TEMPERATURE_FUSION = 4.0
 
 
 def _decode_image_safe(b64_str: str | None) -> torch.Tensor | None:
@@ -511,12 +520,12 @@ def predict_image_solo(b64_str: str | None) -> float:
     if USE_OPENVINO:
         # OpenVINO: input numpy (1,3,224,224), output numpy (1,2)
         logits = ov_resnet_solo(img.cpu().numpy())[0]
-        scaled = logits / TEMPERATURE_IMAGE
+        scaled = logits / SENSOR_TEMPERATURE_IMAGE
         return _prob_class1(scaled)
     else:
         with torch.no_grad():
             logits = resnet_solo_model(img)
-            scaled_logits = logits / TEMPERATURE_IMAGE
+            scaled_logits = logits / SENSOR_TEMPERATURE_IMAGE
         return _prob_class1(scaled_logits)
 
 
@@ -531,7 +540,7 @@ def predict_text_solo(text: str) -> float:
     if USE_OPENVINO:
         # OpenVINO: input numpy, output numpy (1,2)
         logits = ov_indobert_solo(_enc_to_ov_numpy(enc))[0]
-        scaled = logits / TEMPERATURE_TEXT
+        scaled = logits / SENSOR_TEMPERATURE_TEXT
         return _prob_class1(scaled)
     else:
         with torch.no_grad():
@@ -539,7 +548,7 @@ def predict_text_solo(text: str) -> float:
                 input_ids      = enc["input_ids"],
                 attention_mask = enc["attention_mask"],
             )
-            scaled_logits = out.logits / TEMPERATURE_TEXT
+            scaled_logits = out.logits / SENSOR_TEMPERATURE_TEXT
         return _prob_class1(scaled_logits)
 
 
@@ -562,14 +571,14 @@ def predict_fusion(b64_str: str | None, text: str) -> float:
             "visual_feat": vis_feat,
             "text_feat": txt_feat,
         })[0]  # numpy (1, 2)
-        scaled = logits / TEMPERATURE_FUSION
+        scaled = logits / SENSOR_TEMPERATURE_FUSION
         return _prob_class1(scaled)
     else:
         with torch.no_grad():
             vis_feat = _extract_visual_features(img)
             txt_feat = _extract_text_features(enc["input_ids"], enc["attention_mask"])
             logits, _ = fusion_model(vis_feat, txt_feat)
-            scaled_logits = logits / TEMPERATURE_FUSION
+            scaled_logits = logits / SENSOR_TEMPERATURE_FUSION
         return _prob_class1(scaled_logits)
 
 
@@ -627,11 +636,11 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
         for i, img in enumerate(img_tensors):
             if USE_OPENVINO:
                 logits_v = ov_resnet_solo(img.cpu().numpy())[0]
-                prob_v = _prob_class1(logits_v / TEMPERATURE_IMAGE)
+                prob_v = _prob_class1(logits_v / DETECTION_TEMPERATURE_IMAGE)
             else:
                 with torch.no_grad():
                     logits_v = resnet_solo_model(img)
-                    prob_v = _prob_class1(logits_v / TEMPERATURE_IMAGE)
+                    prob_v = _prob_class1(logits_v / DETECTION_TEMPERATURE_IMAGE)
             conf_v_list.append(prob_v)
             print(f"  [ResNet34 solo] gambar[{i}] conf_V = {prob_v:.4f}")
         conf_v = sum(conf_v_list) / len(conf_v_list)
@@ -652,7 +661,7 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
                 "visual_feat": avg_vis_feat,
                 "text_feat": txt_feat,
             })[0]  # numpy (1, 2)
-            conf_f = _prob_class1(logits_f / TEMPERATURE_FUSION)
+            conf_f = _prob_class1(logits_f / DETECTION_TEMPERATURE_FUSION)
         else:
             vis_feats = []
             for img in img_tensors:
@@ -665,10 +674,22 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
             with torch.no_grad():
                 txt_feat = _extract_text_features(enc["input_ids"], enc["attention_mask"])
                 logits_f, _ = fusion_model(avg_vis_feat, txt_feat)
-                conf_f = _prob_class1(logits_f / TEMPERATURE_FUSION)
+                conf_f = _prob_class1(logits_f / DETECTION_TEMPERATURE_FUSION)
         print(f"  [Fusion]        conf_F = {conf_f:.4f}")
 
-    conf_t = predict_text_solo(text)
+    # Modifikasi predict_text_solo agar di dalam predict_all memakai DETECTION_TEMPERATURE_TEXT
+    # Kita inline logic predict_text_solo di sini agar tidak merusak fungsi predict_text_solo asli yang bertemperatur SENSOR
+    enc_t = _encode_text(text)
+    if USE_OPENVINO:
+        logits_t = ov_indobert_solo(_enc_to_ov_numpy(enc_t))[0]
+        conf_t = _prob_class1(logits_t / DETECTION_TEMPERATURE_TEXT)
+    else:
+        with torch.no_grad():
+            out_t = indobert_solo_model(
+                input_ids      = enc_t["input_ids"],
+                attention_mask = enc_t["attention_mask"],
+            )
+            conf_t = _prob_class1(out_t.logits / DETECTION_TEMPERATURE_TEXT)
     print(f"  [IndoBERT solo] conf_T = {conf_t:.4f}")
 
     if has_image:

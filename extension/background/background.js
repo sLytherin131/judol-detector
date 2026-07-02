@@ -4,12 +4,13 @@ const API_URL = 'https://ricky131-judol-detector-backend.hf.space'
 const CACHE_PREFIX = 'detcache_'
 
 // ── DETECTION CACHE HELPERS (chrome.storage.local) ──
-// Key: detcache_{hostname}  Value: { is_judol, result, blurredImages, blurredTextSelectors, timestamp }
+// Key: detcache_{hostname+pathname}  Value: { is_judol, result, blurredImages, blurredTextSelectors, timestamp }
+// Contoh key: detcache_detik.com/berita/a  (berbeda dari  detcache_detik.com/berita/b)
 // Tanpa expired (TTL) dan tanpa limit jumlah entry.
 
-async function saveDetectionCache(hostname, data) {
+async function saveDetectionCache(pageKey, data) {
     try {
-        const cacheKey = CACHE_PREFIX + hostname
+        const cacheKey = CACHE_PREFIX + pageKey
         await chrome.storage.local.set({
             [cacheKey]: {
                 ...data,
@@ -21,8 +22,8 @@ async function saveDetectionCache(hostname, data) {
     }
 }
 
-async function getDetectionCache(hostname) {
-    const cacheKey = CACHE_PREFIX + hostname
+async function getDetectionCache(pageKey) {
+    const cacheKey = CACHE_PREFIX + pageKey
     return new Promise(resolve => {
         chrome.storage.local.get([cacheKey], data => {
             const entry = data[cacheKey]
@@ -99,6 +100,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'PAGE_DATA') {
         const tabId = sender.tab.id
         const hostname = (() => { try { return new URL(message.url).hostname } catch { return '' } })()
+        const pathname = (() => { try { return new URL(message.url).pathname.replace(/\/+$/, '') || '/' } catch { return '/' } })()
+        const pageKey = (hostname + pathname).toLowerCase()
 
         // Cek apakah ekstensi aktif (dari storage)
         chrome.storage.local.get(['isActive'], async (data) => {
@@ -124,12 +127,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             let fromCache = false
 
             // Cek cache dulu sebelum panggil API
-            if (hostname) {
-                const cached = await getDetectionCache(hostname)
+            if (pageKey) {
+                const cached = await getDetectionCache(pageKey)
                 if (cached) {
                     result = cached.result
                     fromCache = true
-                    console.log(`[background] Cache hit untuk ${hostname}:`, cached.is_judol ? 'JUDOL' : 'AMAN')
+                    console.log(`[background] Cache hit untuk ${pageKey}:`, cached.is_judol ? 'JUDOL' : 'AMAN')
                 }
             }
 
@@ -149,9 +152,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     return
                 }
 
-                // Simpan hasil ke cache (hanya untuk domain valid)
-                if (hostname) {
-                    await saveDetectionCache(hostname, {
+                // Simpan hasil ke cache (hanya untuk pageKey valid)
+                if (pageKey) {
+                    await saveDetectionCache(pageKey, {
                         is_judol: result.is_judol,
                         result: result,
                         blurredImages: [],
@@ -216,7 +219,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 try {
                     const controller = new AbortController()
                     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
-                    
+
                     const res = await fetch(`${API_URL}/predict-image`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -224,13 +227,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         signal: controller.signal
                     })
                     clearTimeout(timeoutId)
-                    
+
                     const result = await res.json()
                     sendResponse(result)
                     return
                 } catch (e) {
                     const isTimeout = e.name === 'AbortError'
                     console.warn(`[Judol Detector] PREDICT_IMAGE attempt ${attempt} gagal:`, isTimeout ? `timeout (${API_TIMEOUT/1000}s)` : e.message)
+                    if (attempt < API_RETRY_COUNT + 1) {
+                        await delay(API_RETRY_DELAY)
+                    }
+                }
+            }
+            sendResponse({ api_down: true })
+        })()
+        return true;
+    }
+
+    if (message.type === 'PREDICT_TEXT') {
+        // Retry logic untuk PREDICT_TEXT
+        (async () => {
+            for (let attempt = 1; attempt <= API_RETRY_COUNT + 1; attempt++) {
+                try {
+                    const controller = new AbortController()
+                    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+
+                    const res = await fetch(`${API_URL}/predict-text`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: message.text }),
+                        signal: controller.signal
+                    })
+                    clearTimeout(timeoutId)
+
+                    const result = await res.json()
+                    sendResponse(result)
+                    return
+                } catch (e) {
+                    const isTimeout = e.name === 'AbortError'
+                    console.warn(`[Judol Detector] PREDICT_TEXT attempt ${attempt} gagal:`, isTimeout ? `timeout (${API_TIMEOUT/1000}s)` : e.message)
                     if (attempt < API_RETRY_COUNT + 1) {
                         await delay(API_RETRY_DELAY)
                     }
@@ -253,17 +288,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Simpan data elemen yang di-blur ke cache
     if (message.type === 'SAVE_BLUR_CACHE') {
-        const hostname = message.hostname
-        if (hostname) {
-            chrome.storage.local.get([CACHE_PREFIX + hostname], async (data) => {
-                const existing = data[CACHE_PREFIX + hostname]
+        const pageKey = message.pageKey
+        if (pageKey) {
+            chrome.storage.local.get([CACHE_PREFIX + pageKey], async (data) => {
+                const existing = data[CACHE_PREFIX + pageKey]
                 if (existing) {
                     existing.blurredImages = message.blurredImages || existing.blurredImages
                     existing.blurredTextSelectors = message.blurredTextSelectors || existing.blurredTextSelectors
-                    await chrome.storage.local.set({ [CACHE_PREFIX + hostname]: existing })
+                    await chrome.storage.local.set({ [CACHE_PREFIX + pageKey]: existing })
                 } else {
                     // Buat entry baru jika belum ada
-                    await saveDetectionCache(hostname, {
+                    await saveDetectionCache(pageKey, {
                         is_judol: true,
                         result: { is_judol: true, confidence_image: 0, confidence_text: 0, confidence_fusion: 0, final_confidence: 0 },
                         blurredImages: message.blurredImages || [],
@@ -274,10 +309,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     }
 
-    // Ambil cache deteksi untuk sebuah hostname (dipakai content script)
+    // Ambil cache deteksi untuk sebuah halaman (dipakai content script)
     if (message.type === 'GET_CACHE') {
-        const hostname = message.hostname
-        getDetectionCache(hostname).then(cached => {
+        const pageKey = message.pageKey
+        getDetectionCache(pageKey).then(cached => {
             sendResponse(cached)
         })
         return true // async
