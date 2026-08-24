@@ -33,7 +33,7 @@ Judol Detector
 │   │   ├── final_fusion_model.pth      # FusionClassifier checkpoint
 │   │   ├── late_fusion_alpha.json      # Alpha weights late fusion
 │   │   ├── indobert_solo/              # IndoBERT fine-tuned weights
-│   │   └── openvino/                   # OpenVINO IR models (optional)
+│   │   └── openvino/                   # OpenVINO IR models
 │   ├── convert_to_openvino.py  # Script konversi PyTorch → OpenVINO
 │   ├── Dockerfile              # Container untuk deployment (HF Spaces)
 │   └── requirements.txt
@@ -59,15 +59,15 @@ Judol Detector
 
 ## Fitur Utama
 
-- **Deteksi real-time** — setiap halaman dianalisis otomatis saat dibuka
-- **Multi-image support** — mengirim hingga 5 gambar per halaman ke model
-- **Blur/sensor konten** — gambar dan teks judol diblur dengan overlay hitam
-- **Deteksi iklan sponsor** — mendeteksi banner judol di situs film/konten tanpa perlu API
-- **Cache per halaman** — hasil deteksi disimpan agar tidak scan ulang
-- **Blocklist** — pengguna bisa memblokir domain dan redirect ke halaman blokir
-- **Lapor ke Komdigi** — integrasi dengan aduankonten.id untuk pelaporan
-- **OpenVINO acceleration** — inferensi lebih cepat di CPU menggunakan OpenVINO IR
-- **Retry & cold start handling** — background script retry otomatis jika API belum siap
+- **Deteksi real-time**: setiap halaman dianalisis otomatis saat dibuka
+- **Multi-image support**: mengirim hingga 5 gambar per halaman ke model
+- **Blur/sensor konten**: gambar dan teks judol diblur dengan overlay hitam
+- **Deteksi iklan sponsor**: mendeteksi banner judol di situs film/konten tanpa perlu API
+- **Cache per halaman**: hasil deteksi disimpan agar tidak scan ulang
+- **Blocklist**: pengguna bisa memblokir domain dan redirect ke halaman blokir
+- **Lapor ke Komdigi**: integrasi dengan aduankonten.id untuk pelaporan
+- **OpenVINO acceleration**: inferensi lebih cepat di CPU menggunakan OpenVINO IR
+- **Retry & cold start handling**: background script retry otomatis jika API belum siap
 
 ---
 
@@ -153,7 +153,7 @@ docker run -p 7860:7860 judol-detector-api
 
 ---
 
-## Konversi ke OpenVINO (Opsional)
+## Konversi ke OpenVINO
 
 OpenVINO mempercepat inferensi secara signifikan di CPU. Jalankan sekali di lokal:
 
@@ -185,7 +185,7 @@ Output disimpan ke `backend/weights/openvino/`. Upload folder ini ke deployment 
 - FastAPI + Uvicorn
 - PyTorch + torchvision
 - HuggingFace Transformers (IndoBERT)
-- OpenVINO (opsional, accelerated inference)
+- OpenVINO (accelerated inference)
 - Docker (deployment ke HF Spaces)
 
 **Extension**
@@ -200,13 +200,13 @@ Output disimpan ke `backend/weights/openvino/`. Upload folder ini ke deployment 
 Alur kerja content script saat halaman dibuka:
 
 ```
-1. Cek cache → jika ada hasil sebelumnya, langsung blur dari cache
-2. Blur iklan sponsor (keyword-based, tanpa API) — langsung saat halaman dimuat
+1. Cek cache: jika ada hasil sebelumnya, langsung blur dari cache
+2. Blur iklan sponsor (keyword-based, tanpa API): langsung saat halaman dimuat
 3. Ekstrak teks halaman (judul, meta, heading, paragraf, anchor, CTA)
 4. Ekstrak gambar halaman (max 5, prioritas gambar iklan judol)
 5. Konversi gambar ke base64 melalui background script (bypass CORS)
-6. Kirim ke API → terima hasil deteksi
-7. Jika judol: tampilkan overlay warning → blur gambar & teks judol
+6. Kirim ke API: terima hasil deteksi
+7. Jika judol: tampilkan overlay warning dan blur gambar & teks judol
 8. Simpan hasil ke cache (per halaman)
 ```
 
@@ -214,9 +214,8 @@ Alur kerja content script saat halaman dibuka:
 
 ## Kontribusi
 
-Pull request dan issue sangat disambut. Beberapa area yang bisa dikembangkan:
+Beberapa area yang bisa dikembangkan:
 
 - Penambahan dataset gambar dan teks judol
 - Peningkatan akurasi model (fine-tuning lebih lanjut)
-- Support Firefox (WebExtensions API)
 - Dashboard statistik deteksi
