@@ -23,9 +23,10 @@ async def predict(request: PredictRequest):
         # Run CPU-bound prediction in thread pool (non-blocking)
         result = await asyncio.to_thread(
             predict_all,
-            b64_str    = request.image_b64,
-            images_b64 = request.images_b64,
-            text       = request.text,
+            b64_str      = request.image_b64,
+            images_b64   = request.images_b64,
+            text         = request.text,
+            has_judol_ad = request.has_judol_ad or False,
         )
         print(f"[API /predict] HASIL → is_judol={result['is_judol']}, "
               f"V={result['confidence_image']:.3f}, T={result['confidence_text']:.3f}, "

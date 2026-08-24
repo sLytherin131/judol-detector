@@ -1,45 +1,3 @@
-"""
-predictor.py — Late Fusion: ResNet34 + IndoBERT → Concat → FC → Softmax
-=========================================================================
-
-Mendukung dua backend inference:
-  1. OpenVINO (otomatis jika weights/openvino/ ada) — ~2-4x lebih cepat di Intel CPU
-  2. PyTorch  (fallback jika OpenVINO tidak tersedia)
-
-Arsitektur SESUAI notebook training:
-
-  Image  : ResNet34 (fc=Identity) → 512-dim feature
-  Text   : IndoBERT AutoModel, CLS token → 768-dim feature
-  Fusion : Concat[512+768=1280] → Linear(1280,256) → ReLU → Dropout(0.3)
-           → Linear(256,2) → Softmax
-
-  Solo Image : ResNet34 dengan fc=Linear(512,2)
-  Solo Text  : AutoModelForSequenceClassification (dari INDOBERT_PATH)
-
-Late Fusion final:
-  combined = α1 * prob_V + α2 * prob_T + α3 * prob_F
-  Alpha terbaik (dari grid search): α1=0.5, α2=0.1, α3=0.4
-
-File bobot yang diperlukan (taruh di backend/weights/):
-  weights/best_resnet34.pth        ← state_dict ResNet34 dengan fc=Linear(512,2)
-  ├── indobert_solo/           ← folder AutoModelForSequenceClassification
-  │   ├── config.json
-  │   ├── tokenizer_config.json
-  │   ├── vocab.txt
-  │   └── pytorch_model.bin
-  ├── final_fusion_model.pth   ← state_dict FusionClassifier
-  └── late_fusion_alpha.json   ← {"alpha_image":0.5,"alpha_text":0.0,"alpha_fusion":0.5}
-
-  weights/openvino/              ← (opsional) hasil konversi dari convert_to_openvino.py
-  ├── resnet34_solo.xml + .bin
-  ├── resnet34_backbone.xml + .bin
-  ├── indobert_solo.xml + .bin
-  ├── indobert_backbone.xml + .bin
-  └── fusion.xml + .bin
-
-Cara aktifkan: ubah MODEL_READY = True di bawah, lalu restart server.
-"""
-
 import os
 import json
 import torch
@@ -52,7 +10,7 @@ from torchvision import transforms, models
 import torch.nn as nn
 from safetensors.torch import load_file as safe_load_file
 
-# OpenVINO (opsional — diimpor hanya jika tersedia)
+# OpenVINO
 try:
     import openvino as ov
     OPENVINO_AVAILABLE = True
@@ -62,18 +20,17 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────
 # KONFIGURASI
 # ─────────────────────────────────────────────────────────────
-MODEL_READY = True   # ← ubah True setelah semua bobot tersedia
+MODEL_READY = True   
 
 THRESHOLD        = 0.60   # ← threshold saat ada gambar (multimodal)
-THRESHOLD_TEXT_ONLY = 0.70   # ← threshold lebih ketat saat tidak ada gambar sama sekali
-                              #   mencegah false positive pada halaman yang sekadar membahas judol
+THRESHOLD_TEXT_ONLY = 0.70   
 
-# Default alpha (override oleh late_fusion_alpha.json jika ada)
-ALPHA_IMAGE   = 0.5
-ALPHA_TEXT    = 0.1
-ALPHA_FUSION  = 0.4
+# Default alpha
+ALPHA_IMAGE   = 0.41
+ALPHA_TEXT    = 0.10
+ALPHA_FUSION  = 0.49
 
-# Dimensi fitur (harus sama dengan notebook)
+# Dimensi fitur 
 VISUAL_DIM  = 512    # ResNet34 avg pool output
 TEXT_DIM    = 768    # IndoBERT [CLS] hidden size
 PROJ_DIM    = 512    # Self-Attention projection dim (harus bisa dibagi NUM_HEADS)
@@ -92,27 +49,17 @@ FUSION_PATH   = os.path.join(WEIGHTS_DIR, "final_fusion_model.pth")
 ALPHA_PATH    = os.path.join(WEIGHTS_DIR, "late_fusion_alpha.json")
 OV_DIR        = os.path.join(WEIGHTS_DIR, "openvino")
 
-# Backend yang aktif (ditentukan otomatis saat load_models)
+# Backend yang aktif
 USE_OPENVINO = False
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# ─────────────────────────────────────────────────────────────
-# ARSITEKTUR FUSION — Self-Attention (identik dengan notebook cell 12)
-# ─────────────────────────────────────────────────────────────
+# ──────────────────────────────────
+# ARSITEKTUR FUSION — Self-Attention 
+# ──────────────────────────────────
 class FusionClassifier(nn.Module):
-    """
-    Self-Attention Fusion:
-    1. Project visual [512] dan text [768] ke proj_dim [512]
-    2. Stack → sequence [2, B, proj_dim]
-    3. MultiheadAttention → attended features
-    4. Residual + LayerNorm → mean-pool → [proj_dim]
-    5. FC → hidden_dim → num_classes
 
-    Identik dengan SelfAttentionFusionClassifier di notebook cell 12.
-    forward() mengembalikan (logits, attn_weights) — attn_weights diabaikan saat inference.
-    """
     def __init__(self, visual_dim=VISUAL_DIM, text_dim=TEXT_DIM,
                  proj_dim=PROJ_DIM, hidden_dim=HIDDEN_DIM,
                  num_classes=NUM_CLASSES, dropout=DROPOUT, num_heads=NUM_HEADS):
@@ -145,21 +92,21 @@ class FusionClassifier(nn.Module):
         )
 
     def forward(self, visual_feat, text_feat):
-        v = self.proj_visual(visual_feat)       # [B, proj_dim]
-        t = self.proj_text(text_feat)           # [B, proj_dim]
+        v = self.proj_visual(visual_feat)       
+        t = self.proj_text(text_feat)           
 
-        seq = torch.stack([v, t], dim=0)        # [2, B, proj_dim]
+        seq = torch.stack([v, t], dim=0)     
 
         attn_out, attn_weights = self.self_attn(seq, seq, seq)
-        attn_out = self.attn_norm(attn_out + seq)  # residual + norm
+        attn_out = self.attn_norm(attn_out + seq)  
 
-        fused  = attn_out.mean(dim=0)           # [B, proj_dim]
-        logits = self.classifier(fused)         # [B, num_classes]
+        fused  = attn_out.mean(dim=0)           
+        logits = self.classifier(fused)       
         return logits, attn_weights
 
 
 # ─────────────────────────────────────────────────────────────
-# LOAD ALPHA DARI JSON (jika ada)
+# LOAD ALPHA DARI JSON 
 # ─────────────────────────────────────────────────────────────
 def _load_alpha():
     global ALPHA_IMAGE, ALPHA_TEXT, ALPHA_FUSION
@@ -204,7 +151,7 @@ def load_models():
 
     _load_alpha()
 
-    # ── Cek apakah OpenVINO tersedia dan bobot sudah dikonversi ──
+    
     ov_xml_files = [
         "resnet34_solo.xml", "resnet34_backbone.xml",
         "indobert_solo.xml", "indobert_backbone.xml",
@@ -582,7 +529,7 @@ def predict_fusion(b64_str: str | None, text: str) -> float:
         return _prob_class1(scaled_logits)
 
 
-def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = None) -> dict:
+def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = None, has_judol_ad: bool = False) -> dict:
     """
     Late Fusion Final (identik cell 21 notebook) dengan dukungan multi-image:
         - Mengekstrak visual features untuk seluruh gambar yang valid (maksimal 5).
@@ -631,7 +578,9 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
     conf_f = 0.0
 
     if has_image:
-        # 1. Prediction_V (Rata-rata probabilitas dari ResNet34 Solo untuk tiap gambar)
+        # 1. Prediction_V — pakai MAX bukan rata-rata
+        # Alasan: satu gambar judol di antara banyak gambar konten normal (web film bajakan)
+        # sudah cukup sebagai bukti. Rata-rata akan "mengencerkan" sinyal tersebut.
         conf_v_list = []
         for i, img in enumerate(img_tensors):
             if USE_OPENVINO:
@@ -643,39 +592,39 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
                     prob_v = _prob_class1(logits_v / DETECTION_TEMPERATURE_IMAGE)
             conf_v_list.append(prob_v)
             print(f"  [ResNet34 solo] gambar[{i}] conf_V = {prob_v:.4f}")
-        conf_v = sum(conf_v_list) / len(conf_v_list)
-        print(f"  [ResNet34 solo] rata-rata conf_V = {conf_v:.4f}")
+        conf_v_avg = sum(conf_v_list) / len(conf_v_list)
+        conf_v_max = max(conf_v_list)
+        # Gunakan max jika selisih max vs avg signifikan (ada outlier gambar judol)
+        # Jika semua gambar seragam, avg dan max hampir sama sehingga tidak ada dampak besar
+        conf_v = conf_v_max
+        print(f"  [ResNet34 solo] avg={conf_v_avg:.4f}, max={conf_v_max:.4f} → conf_V = {conf_v:.4f} (max pooling)")
 
-        # 2. Prediction_F (Rata-rata fitur visual, lalu dicombine dengan teks)
+        # 2. Prediction_F — pakai visual feature dari gambar dengan conf_V tertinggi
+        # Bukan rata-rata semua feature, agar fusion tidak "diencerkan" poster film
+        best_img_idx = conf_v_list.index(max(conf_v_list))
+        best_img = img_tensors[best_img_idx]
+
         if USE_OPENVINO:
-            vis_feats_np = []
-            for img in img_tensors:
-                feat = _extract_visual_features_ov(img)  # numpy (1, 512)
-                vis_feats_np.append(feat)
-            avg_vis_feat = np.mean(np.stack(vis_feats_np), axis=0)  # numpy (1, 512)
+            best_vis_feat = _extract_visual_features_ov(best_img)  # numpy (1, 512)
 
             enc = _encode_text(text)
             txt_feat = _extract_text_features_ov(enc["input_ids"], enc["attention_mask"],
                                                  enc.get("token_type_ids"))  # numpy (1, 768)
             logits_f = ov_fusion({
-                "visual_feat": avg_vis_feat,
+                "visual_feat": best_vis_feat,
                 "text_feat": txt_feat,
             })[0]  # numpy (1, 2)
             conf_f = _prob_class1(logits_f / DETECTION_TEMPERATURE_FUSION)
         else:
-            vis_feats = []
-            for img in img_tensors:
-                with torch.no_grad():
-                    feat = _extract_visual_features(img)
-                    vis_feats.append(feat)
-            avg_vis_feat = torch.mean(torch.stack(vis_feats), dim=0)
+            with torch.no_grad():
+                best_vis_feat = _extract_visual_features(best_img)
 
             enc = _encode_text(text)
             with torch.no_grad():
                 txt_feat = _extract_text_features(enc["input_ids"], enc["attention_mask"])
-                logits_f, _ = fusion_model(avg_vis_feat, txt_feat)
+                logits_f, _ = fusion_model(best_vis_feat, txt_feat)
                 conf_f = _prob_class1(logits_f / DETECTION_TEMPERATURE_FUSION)
-        print(f"  [Fusion]        conf_F = {conf_f:.4f}")
+        print(f"  [Fusion]        conf_F = {conf_f:.4f} (dari gambar[{best_img_idx}] = gambar terbaik)")
 
     # Modifikasi predict_text_solo agar di dalam predict_all memakai DETECTION_TEMPERATURE_TEXT
     # Kita inline logic predict_text_solo di sini agar tidak merusak fungsi predict_text_solo asli yang bertemperatur SENSOR
@@ -695,13 +644,21 @@ def predict_all(b64_str: str | None, text: str, images_b64: list[str] | None = N
     if has_image:
         final     = ALPHA_IMAGE * conf_v + ALPHA_TEXT * conf_t + ALPHA_FUSION * conf_f
         threshold = THRESHOLD
-        print(f"  [Late Fusion]   {ALPHA_IMAGE}*{conf_v:.4f} + {ALPHA_TEXT}*{conf_t:.4f} + {ALPHA_FUSION}*{conf_f:.4f} = {final:.4f}")
+
+        
+        if has_judol_ad:
+            print(f"  [Override]      has_judol_ad=True → is_judol langsung True (iklan judol terdeteksi di halaman)")
+            is_judol = True
+            print(f"  [Late Fusion]   {ALPHA_IMAGE}*{conf_v:.4f} + {ALPHA_TEXT}*{conf_t:.4f} + {ALPHA_FUSION}*{conf_f:.4f} = {final:.4f} (informatif)")
+        else:
+            print(f"  [Late Fusion]   {ALPHA_IMAGE}*{conf_v:.4f} + {ALPHA_TEXT}*{conf_t:.4f} + {ALPHA_FUSION}*{conf_f:.4f} = {final:.4f}")
+            is_judol = bool(final >= threshold)
     else:
         final     = conf_t
         threshold = THRESHOLD_TEXT_ONLY
+        is_judol  = bool(final >= threshold)
         print(f"  [Text Only]     final = conf_T = {conf_t:.4f} (threshold={threshold})")
 
-    is_judol = bool(final >= threshold)
     print(f"  [HASIL]         final={final:.4f} >= threshold={threshold} → is_judol={is_judol}")
     print(f"{sep}\n")
 

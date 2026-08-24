@@ -221,6 +221,68 @@ if (window.__judolDetectorInjected) {
 
     // ── EKSTRAKSI TEKS ──
 
+    // ── DETEKSI IKLAN JUDOL DI WEB FILM/KONTEN LEGAL ──
+    // Pola nama brand/domain judol yang sering muncul sebagai sponsor di situs film bajakan
+    // Pola ini SENGAJA agresif karena hanya dicek di konteks URL sponsor/iklan
+    const JUDOL_SPONSOR_PATTERNS = [
+        // Pola QQ + angka (sangat umum: qq888, qq101, qq724, qq882, qq828, qq801, dll)
+        /qq\d{2,4}/i,
+        // Pola nama + angka umum situs judol (slot77, bet88, gacor99, dll)
+        /(?:slot|gacor|bet|judi|togel|casino|poker|spin|jackpot|maxwin|rtp)\d{2,4}/i,
+        // Domain rebrand/shortlink judol populer
+        /rebrand\.ly\/[a-z0-9]*(?:bet|slot|qq|gacor|togel|casino|poker)/i,
+        // Nama domain judol langsung
+        /(?:qq\d+|slot\d+|gacor\d+|togel\d+|casino\d+)\./i,
+        // Nama file gambar iklan yang mengandung kata judol
+        // Contoh: anime-judi8.gif, bettogel.gif, zeonslotpopup.gif, anime-slot88.gif
+        /(?:judi|slot|gacor|togel|casino|poker|maxwin|jackpot|scatter|rtp)[\w-]*\.(?:gif|webp|jpg|jpeg|png)/i,
+    ]
+
+    // Cek apakah sebuah URL adalah sponsor/iklan judol berdasarkan pola nama brand
+    function isSponsorJudol(url) {
+        if (!url) return false
+        return JUDOL_SPONSOR_PATTERNS.some(pattern => pattern.test(url))
+    }
+
+    // ── DETEKSI & BLUR GAMBAR IKLAN JUDOL SECARA LANGSUNG (tanpa API) ──
+    // Fungsi ini dipanggil sebelum collectAndSend() dan langsung blur iklan yang terdeteksi
+    function blurSponsorAds() {
+        // 1. Cari anchor yang href-nya mengarah ke situs judol (iklan banner sponsor)
+        const anchors = document.querySelectorAll('a[href]')
+        anchors.forEach(anchor => {
+            const href = anchor.getAttribute('href') || ''
+            if (!isSponsorJudol(href) && !hrefIsJudol(href)) return
+
+            // Blur semua gambar di dalam anchor ini
+            anchor.querySelectorAll('img').forEach(img => {
+                if (img.dataset.judolBlurred === 'true') return
+                blurElement(img)
+            })
+
+            // Block klik anchor (nonaktifkan link) tapi jangan double-blur jika gambar sudah di-blur
+            if (anchor.dataset.judolTextBlurred !== 'true') {
+                anchor.dataset.judolTextBlurred = 'true'
+                anchor.style.pointerEvents = 'none'
+                anchor.title = 'Konten disensor oleh Judol Detector'
+                // Hanya blur jika anchor tidak punya gambar anak (teks-only ad)
+                const hasImages = anchor.querySelector('img') !== null
+                if (!hasImages) {
+                    anchor.style.filter = 'blur(8px)'
+                }
+            }
+        })
+
+        // 2. Cari gambar yang src-nya langsung mengandung pola judol
+        const imgs = document.querySelectorAll('img[src]')
+        imgs.forEach(img => {
+            if (img.dataset.judolBlurred === 'true') return
+            const src = img.getAttribute('src') || ''
+            if (isSponsorJudol(src)) {
+                blurElement(img)
+            }
+        })
+    }
+
     // Kata-kata yang sering menyebabkan false positive pada model teks.
     // Kata-kata ini DIHAPUS dari teks yang dikirim ke API untuk deteksi,
     // tapi TIDAK mempengaruhi fitur blur/sensor (sensor tetap blur berdasarkan keyword seperti biasa).
@@ -291,7 +353,13 @@ if (window.__judolDetectorInjected) {
             .map(a => {
                 const text = (a.innerText || a.textContent || '').trim()
                 const href = a.getAttribute('href') || ''
-                return [text, href].filter(Boolean).join(' ')
+                // Untuk iklan sponsor (href ke shortlink judol), tambahkan path URL yang mengandung brand name
+                let hrefText = href
+                try {
+                    const hrefUrl = new URL(href, window.location.href)
+                    hrefText = hrefUrl.hostname + hrefUrl.pathname
+                } catch { hrefText = href }
+                return [text, hrefText].filter(Boolean).join(' ')
             })
             .join(' ')
 
@@ -360,10 +428,15 @@ if (window.__judolDetectorInjected) {
         'pragmatic', 'pgsoft', 'habanero', 'olympus', 'demo slot'
     ]
 
-    // Kata kunci yang khusus dicek di URL/href anchor (lebih agresif)
+    // Kata kunci yang khusus dicek di hostname+pathname anchor (untuk has_judol_ad dan blurring)
+    // PENTING: hanya kata yang spesifik untuk DOMAIN/SLUG situs judol
+    // Jangan tambahkan kata umum — muncul di URL artikel berita
+    // (contoh: detik.com/tag/operator-judol-kamboja/, detik.com/.../hacker-buat-promosi-judi-online)
     const JUDOL_HREF_KEYWORDS = [
-        'slot', 'togel', 'casino', 'bet', 'gacor', 'maxwin', 'judol',
-        'judi', 'poker', 'spin', 'jackpot', 'scatter', 'rtp'
+        'sbobet',
+        // Pola brand situs judol yang sering jadi sponsor web film bajakan
+        'qq888', 'qq101', 'qq724', 'qq882', 'qq828', 'qq801', 'qq77',
+        'qq99', 'qq11', 'slotbet', 'judibet', 'gacorbet', 'casinobet'
     ]
 
     // Kata yang diwhitelist — teks yang hanya mengandung ini TIDAK dianggap judol
@@ -391,8 +464,8 @@ if (window.__judolDetectorInjected) {
                 end++
             }
             const fullWord = str.substring(start, end)
-            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-']
-            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta'))
+            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-', 'bounty', 'abet', 'abet']
+            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta') || fullWord.startsWith('bount') || fullWord.endsWith('abet') || fullWord.startsWith('betw') || fullWord.startsWith('bett'))
         }
 
         return JUDOL_KEYWORDS.some(kw => {
@@ -427,8 +500,8 @@ if (window.__judolDetectorInjected) {
                 end++
             }
             const fullWord = str.substring(start, end)
-            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-']
-            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta'))
+            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-', 'bounty', 'abet', 'abet']
+            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta') || fullWord.startsWith('bount') || fullWord.endsWith('abet') || fullWord.startsWith('betw') || fullWord.startsWith('bett'))
         }
 
         return JUDOL_IMAGE_KEYWORDS.some(kw => {
@@ -454,6 +527,20 @@ if (window.__judolDetectorInjected) {
         // Abaikan anchor internal, mailto, javascript:
         if (lower.startsWith('#') || lower.startsWith('mailto:') || lower.startsWith('javascript:')) return false
 
+        // ── PENTING: hanya cek hostname + pathname, BUKAN query string / fragment ──
+        // Query string sering mengandung URL artikel berita yang membahas judol
+        // (contoh: ?redirectUrl=...jual-web-buat-promosi-judi-online)
+        // sehingga menyebabkan false positive pada situs berita
+        let checkTarget = lower
+        try {
+            const parsed = new URL(href, window.location.href)
+            // Gabungkan hostname + pathname saja, abaikan search & hash
+            checkTarget = (parsed.hostname + parsed.pathname).toLowerCase()
+        } catch {
+            // URL tidak valid, tetap pakai lower tapi potong di tanda '?'
+            checkTarget = lower.split('?')[0].split('#')[0]
+        }
+
         // Helper to check if a match for 'bet' is a false positive
         const isBetFalsePositive = (str, idx) => {
             let start = idx
@@ -465,21 +552,21 @@ if (window.__judolDetectorInjected) {
                 end++
             }
             const fullWord = str.substring(start, end)
-            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-']
-            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta'))
+            const falsePositives = ['beta', 'between', 'better', 'alphabet', 'obesity', 'diabetes', 'beetroot', 'beetle', 'beta-', 'bounty', 'abet', 'abet']
+            return falsePositives.some(fp => fp === fullWord || fullWord.startsWith('beta') || fullWord.startsWith('bount') || fullWord.endsWith('abet') || fullWord.startsWith('betw') || fullWord.startsWith('bett'))
         }
 
         return JUDOL_HREF_KEYWORDS.some(kw => {
-            let idx = lower.indexOf(kw)
+            let idx = checkTarget.indexOf(kw)
             while (idx !== -1) {
                 if (kw === 'bet') {
-                    if (!isBetFalsePositive(lower, idx)) {
+                    if (!isBetFalsePositive(checkTarget, idx)) {
                         return true
                     }
                 } else {
                     return true
                 }
-                idx = lower.indexOf(kw, idx + 1)
+                idx = checkTarget.indexOf(kw, idx + 1)
             }
             return false
         })
@@ -649,6 +736,10 @@ if (window.__judolDetectorInjected) {
         // Tambahkan domain hosting landing page kamu di sini, misal:
         // 'judol-detector.vercel.app',
         // 'judoldetector.id',
+
+        // Platform pelaporan konten judol resmi Kominfo
+        // Halaman ini sering membahas judol tapi bukan mempromosikannya
+        'aduankonten.id',
     ]
 
     function isTrustedDomain() {
@@ -736,29 +827,182 @@ if (window.__judolDetectorInjected) {
         // Tampilkan loading indicator
         showLoadingIndicator()
 
-        const text = extractText()
-        const images = extractImages()
+        // Langsung sensor iklan sponsor judol tanpa menunggu API
+        // (berguna untuk web film bajakan yang punya iklan judol tapi konten utamanya bukan judol)
+        chrome.storage.local.get(['isActive', 'sensorActive'], (data) => {
+            if (data.isActive && data.sensorActive) blurSponsorAds()
+        })
 
-        // Deteksi awal halaman: hanya kirim 5 gambar terbesar ke API
-        // (tidak perlu semua gambar, cukup untuk menentukan apakah halaman judol)
         const MAX_IMAGES = 5
-        const selectedImages = images
-            .filter(img => !img.srcDuplicate)
-            .sort((a, b) => (b.w * b.h) - (a.w * a.h))
-            .slice(0, MAX_IMAGES)
 
-        // Konversi ke base64 secara paralel
-        const base64Promises = selectedImages.map(img => imageUrlToBase64(img.src))
-        const base64Results = await Promise.all(base64Promises)
-        const validBase64s = base64Results.filter(b64 => b64 !== null)
+        // ── EKSTRAKSI ELEMEN IKLAN ──
+        // Kumpulkan gambar + teks HANYA dari elemen yang terindikasi iklan judol EKSPLISIT
+        // Kriteria KETAT agar tidak mengambil gambar artikel berita:
+        //   1. Anchor dengan href cocok pola sponsor judol (qq888, rebrand.ly/qq*, dll.)
+        //   2. Anchor dengan rel="nofollow" + target="_blank" ke domain luar
+        //      DAN gambarnya mengandung keyword judol di nama file atau alt text
+        //   3. Container iklan berdasarkan class/id yang spesifik
+        const adImages = []   // { src, el } gambar dari elemen iklan judol eksplisit
+        const adTexts  = []   // teks dari elemen iklan
+
+        const currentHost = window.location.hostname.toLowerCase()
+
+        // Helper: cek apakah anchor adalah iklan judol eksplisit
+        // LEBIH KETAT dari sebelumnya — hanya return true jika ada sinyal judol kuat
+        function isAdAnchor(anchor) {
+            const href   = anchor.getAttribute('href') || ''
+            const rel    = (anchor.getAttribute('rel') || '').toLowerCase()
+            const target = (anchor.getAttribute('target') || '').toLowerCase()
+
+            // Sponsor judol langsung berdasarkan pola URL — paling reliable
+            if (isSponsorJudol(href) || hrefIsJudol(href)) return true
+
+            // rel nofollow + target blank ke domain luar — tapi HANYA jika
+            // gambar di dalamnya juga mengandung sinyal judol
+            if (rel.includes('nofollow') && target === '_blank') {
+                try {
+                    const hrefHost = new URL(href, window.location.href).hostname.toLowerCase()
+                    if (hrefHost && hrefHost !== currentHost) {
+                        // Cek apakah ada gambar dengan nama file mengandung keyword judol
+                        const imgs = anchor.querySelectorAll('img')
+                        const hasJudolImg = [...imgs].some(img => {
+                            const src = img.getAttribute('src') || ''
+                            const alt = (img.getAttribute('alt') || '').toLowerCase()
+                            return isSponsorJudol(src) || containsJudolImageKeyword(alt)
+                        })
+                        if (hasJudolImg) return true
+                    }
+                } catch { /* skip */ }
+            }
+
+            return false
+        }
+
+        // Helper: cek apakah elemen adalah container iklan berdasarkan class/id
+        function isAdContainer(el) {
+            const cls = ((el.className && typeof el.className === 'string') ? el.className : '').toLowerCase()
+            const id  = (el.id || '').toLowerCase()
+            const combined = cls + ' ' + id
+            const AD_SIGNALS = ['ad-', 'ads-', 'banner', 'sponsor', 'promo', 'iklan',
+                                 '-ad ', ' ad ', 'advert', 'pub-', 'adsense',
+                                 'nb-sponsor', 'ad_', '_ad_']
+            return AD_SIGNALS.some(s => combined.includes(s))
+        }
+
+        const seenAdSrc = new Set()
+
+        // 1. Scan semua anchor sebagai kandidat iklan judol eksplisit
+        document.querySelectorAll('a').forEach(anchor => {
+            if (!isAdAnchor(anchor)) return
+
+            // Debug log
+            console.log('[Judol Detector] Ad anchor terdeteksi:', anchor.getAttribute('href')?.slice(0, 80))
+
+            // Ambil semua gambar di dalam anchor ini
+            anchor.querySelectorAll('img').forEach(img => {
+                const src = img.src || img.dataset.src || img.dataset.lazy || ''
+                if (!src.startsWith('http') || seenAdSrc.has(src)) return
+                seenAdSrc.add(src)
+                adImages.push({ src, el: img })
+            })
+
+            // Kumpulkan teks dari anchor: teks visible, alt, title, teks tombol CTA
+            const anchorText = [
+                anchor.innerText || anchor.textContent || '',
+                ...[...anchor.querySelectorAll('img')].map(i => i.alt || ''),
+                ...[...anchor.querySelectorAll('[class*="title"],[class*="desc"],[class*="btn"],[class*="message"]')]
+                    .map(el => el.innerText || el.textContent || '')
+            ].join(' ').replace(/\s+/g, ' ').trim()
+
+            if (anchorText.length > 3) adTexts.push(anchorText)
+        })
+
+        // 2. Scan container iklan berdasarkan class/id
+        document.querySelectorAll('div, section, aside').forEach(container => {
+            if (!isAdContainer(container)) return
+
+            container.querySelectorAll('img').forEach(img => {
+                const src = img.src || img.dataset.src || ''
+                if (!src.startsWith('http') || seenAdSrc.has(src)) return
+                seenAdSrc.add(src)
+                adImages.push({ src, el: img })
+            })
+
+            const containerText = (container.innerText || container.textContent || '')
+                .replace(/\s+/g, ' ').trim().slice(0, 300)
+            if (containerText.length > 3) adTexts.push(containerText)
+        })
+
+        console.log(`[Judol Detector] Elemen iklan: ${adImages.length} gambar, ${adTexts.length} teks`)
+
+        // ── PILIH 5 GAMBAR: iklan dulu, sisanya gambar halaman ──
+        const allPageImages = extractImages()
+
+        // Gambar iklan yang belum duplikat — masuk pertama
+        const adImgForApi = adImages.slice(0, MAX_IMAGES)
+
+        // Sisa slot diisi gambar halaman (bukan dari elemen iklan, sort by size)
+        const remaining = MAX_IMAGES - adImgForApi.length
+        const pageImgForApi = allPageImages
+            .filter(img => !img.srcDuplicate && !seenAdSrc.has(img.src))
+            .sort((a, b) => (b.w * b.h) - (a.w * a.h))
+            .slice(0, remaining)
+
+        const selectedSrcs = [
+            ...adImgForApi.map(i => i.src),
+            ...pageImgForApi.map(i => i.src)
+        ]
+
+        console.log(`[Judol Detector] Gambar dipilih: ${adImgForApi.length} iklan + ${pageImgForApi.length} halaman = ${selectedSrcs.length} total`)
+
+        // ── SUSUN TEKS: teks halaman + teks dari elemen iklan ──
+        const pageText  = extractText()
+        // Gabungkan teks iklan di depan agar model membaca sinyal judol lebih awal
+        const adTextJoined = adTexts.slice(0, 10).join(' ').replace(/\s+/g, ' ').trim()
+        const combinedText = (adTextJoined + ' ' + pageText).trim().slice(0, 2500)
+
+        console.log(`[Judol Detector] Teks iklan ditambahkan: "${adTextJoined.slice(0, 100)}..."`)
+
+        // ── KONVERSI GAMBAR KE BASE64 ──
+        const base64Promises = selectedSrcs.map(src => imageUrlToBase64(src))
+        const base64Results  = await Promise.all(base64Promises)
+        const validBase64s   = base64Results.filter(b64 => b64 !== null)
+
+        // ── TENTUKAN FLAG has_judol_ad ──
+        // True hanya jika ada anchor yang href-nya cocok pola sponsor judol eksplisit
+        // (bukan sekadar target="_blank" + domain luar)
+        let hasJudolAd = false
+        const judolAdAnchor = [...document.querySelectorAll('a[href]')].find(a => {
+            const href = a.getAttribute('href') || ''
+            return isSponsorJudol(href) || hrefIsJudol(href)
+        })
+        if (judolAdAnchor) {
+            hasJudolAd = true
+            console.log('[Judol Detector] has_judol_ad=true — anchor judol ditemukan:',
+                judolAdAnchor.getAttribute('href'),
+                '| teks:', (judolAdAnchor.innerText || '').slice(0, 50))
+        }
+
+        const judolAdImg = !hasJudolAd && [...document.querySelectorAll('img[src]')].find(img => {
+            return isSponsorJudol(img.getAttribute('src') || '')
+        })
+        if (judolAdImg) {
+            hasJudolAd = true
+            console.log('[Judol Detector] has_judol_ad=true — gambar judol ditemukan:', judolAdImg.getAttribute('src'))
+        }
+
+        if (!hasJudolAd) {
+            console.log('[Judol Detector] has_judol_ad=false — tidak ada iklan judol eksplisit')
+        }
 
         safeSendMessage({
             type: 'PAGE_DATA',
             url: window.location.href,
-            text: text,
+            text: combinedText,
             mainImage: validBase64s[0] || null,
             images: validBase64s,
-            allImages: images.map(img => img.src)
+            allImages: allPageImages.map(img => img.src),
+            hasJudolAd: hasJudolAd
         }, () => { })  // callback kosong — tidak perlu response
     }
 
@@ -865,6 +1109,29 @@ if (window.__judolDetectorInjected) {
             isPageJudol = message.result.is_judol;
             isFromCache = message.fromCache || false;
 
+            // ── OVERRIDE: cek keberadaan iklan sponsor judol di halaman ──
+            // Situs film ilegal sering punya iklan judol meski konten utamanya bukan judol.
+            // Jika ada sponsor judol di halaman, paksa scan & blur meski API bilang "aman".
+            if (!isPageJudol) {
+                const hasSponsor = [...document.querySelectorAll('a[href]')].some(a => {
+                    const href = a.getAttribute('href') || ''
+                    return isSponsorJudol(href) || hrefIsJudol(href)
+                }) || [...document.querySelectorAll('img[src]')].some(img => {
+                    return isSponsorJudol(img.getAttribute('src') || '')
+                })
+                if (hasSponsor) {
+                    console.log('[Judol Detector] Sponsor judol terdeteksi di halaman (meskipun API bilang aman). Memaksa blur sponsor.')
+                    hideLoadingIndicator()
+                    chrome.storage.local.get(['isActive', 'sensorActive'], (data) => {
+                        if (data.isActive && data.sensorActive) {
+                            blurSponsorAds()
+                            blurJudolText()
+                        }
+                    })
+                    return
+                }
+            }
+
             if (isPageJudol) {
                 // JANGAN tampilkan warning overlay jika hasil dari cache ATAU sudah pernah dideteksi dari cache di startup
                 if (!isFromCache && !wasCachedAtStartup && !hasShownWarning) {
@@ -961,6 +1228,10 @@ if (window.__judolDetectorInjected) {
                             applyBlurFromCache(cached)
                         } else {
                             wasCachedAtStartup = true
+                            // Cache bilang aman, tapi tetap blur sponsor ads
+                            chrome.storage.local.get(['isActive', 'sensorActive'], (data) => {
+                                if (data.isActive && data.sensorActive) blurSponsorAds()
+                            })
                         }
                         safeSendMessage({
                             type: 'PAGE_RESULT_FROM_CACHE',
@@ -1188,6 +1459,10 @@ if (window.__judolDetectorInjected) {
         if (!storage.isActive || !storage.sensorActive) {
             return;
         }
+
+        // LANGKAH PERTAMA: Blur iklan sponsor judol secara langsung (tanpa API)
+        // Ini menangkap banner qq888, qq101, dll. yang ada di web film bajakan
+        blurSponsorAds()
 
         const images = extractImages()
         const blurredImageSrcs = []  // track gambar yang di-blur untuk disimpan ke cache
@@ -1598,7 +1873,7 @@ if (window.__judolDetectorInjected) {
             const href = el.getAttribute('href') || ''
 
             const textIsJudol = keywords.some(kw => text.includes(kw))
-            const hrefJudol = hrefIsJudol(href)
+            const hrefJudol = hrefIsJudol(href) || isSponsorJudol(href)
 
             if (textIsJudol || hrefJudol) {
                 el.dataset.judolTextBlurred = "true"
@@ -1850,6 +2125,10 @@ if (window.__judolDetectorInjected) {
                     // ── JALUR CEPAT: sudah pernah dideteksi AMAN sebelumnya ──
                     console.log('[Judol Detector] Cache: Halaman terdeteksi aman, scan dilewati.')
                     wasCachedAtStartup = true
+                    // Cache bilang aman, tapi tetap blur sponsor ads (web film bajakan dll.)
+                    chrome.storage.local.get(['isActive', 'sensorActive'], (data) => {
+                        if (data.isActive && data.sensorActive) blurSponsorAds()
+                    })
                     // Tidak perlu scan ulang — popup akan baca dari session storage via GET_RESULT
 
                 } else {

@@ -34,7 +34,10 @@ async function getDetectionCache(pageKey) {
 
 async function clearAllDetectionCache() {
     const allData = await chrome.storage.local.get(null)
-    const cacheKeys = Object.keys(allData).filter(k => k.startsWith(CACHE_PREFIX))
+    const cacheKeys = Object.keys(allData).filter(k =>
+        k.startsWith(CACHE_PREFIX) ||
+        k === 'judol_image_cache'   // cache hasil prediksi gambar per-URL (fitur sensor)
+    )
     if (cacheKeys.length > 0) {
         await chrome.storage.local.remove(cacheKeys)
     }
@@ -385,10 +388,11 @@ async function callAPI(data) {
                 method : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body   : JSON.stringify({
-                    text      : data.text,
-                    image_b64 : data.mainImage,
-                    images_b64: data.images,
-                    url       : data.url
+                    text         : data.text,
+                    image_b64    : data.mainImage,
+                    images_b64   : data.images,
+                    url          : data.url,
+                    has_judol_ad : data.hasJudolAd || false
                 }),
                 signal: controller.signal
             })
