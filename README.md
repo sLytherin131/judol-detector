@@ -1,4 +1,4 @@
-# Judol Detector <img width="128" height="128" alt="icon128" src="https://github.com/user-attachments/assets/d798bac6-99d0-489f-bf83-5c37fc1d19f3" />
+<img width="48" height="48" alt="icon48" src="https://github.com/user-attachments/assets/062657b1-66d8-4fca-a550-2f07cfc90c7e" /> # Judol Detector
 
 **Judol Detector** adalah ekstensi browser berbasis AI yang mendeteksi dan menyensor konten promosi judi online (*judol*) secara real-time saat browsing. Proyek ini menggabungkan model deep learning multimodal (teks + gambar) dengan antarmuka ekstensi Chrome yang ringan dan intuitif.
 https://antigambling.web.id/
