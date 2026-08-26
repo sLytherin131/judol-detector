@@ -84,6 +84,7 @@ Judol Detector
 | IndoBERT Solo | BERT (fine-tuned) + Classifier | Klasifikasi teks judol |
 | IndoBERT Backbone | BERT (shared dari Solo) | Ekstraksi CLS token 768-dim |
 | FusionClassifier | Self-Attention + FC | Late fusion multimodal |
+https://huggingface.co/spaces/Ricky131/judol-detector-backend/tree/main/weights
 
 **Late Fusion Formula:**
 
@@ -154,6 +155,7 @@ docker run -p 7860:7860 judol-detector-api
 ```
 
 > Backend di-deploy ke **Hugging Face Spaces** dan berjalan di port `7860`.
+> https://huggingface.co/spaces/Ricky131/judol-detector-backend
 
 ---
 
