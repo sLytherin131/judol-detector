@@ -4,6 +4,8 @@
 
 <img width="1858" height="746" alt="image" src="https://github.com/user-attachments/assets/42860526-fa04-4ce6-a45b-1585d288f656" />
 
+## Panduan Penggunaan Ekstensi
+https://drive.google.com/file/d/1h1NXCPFqrE2Hnm5-OOK1XqzMrOvcpqTJ/view?usp=sharing
 ---
 
 ## Cara Kerja
